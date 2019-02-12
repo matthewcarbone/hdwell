@@ -77,12 +77,20 @@ if __name__ == '__main__':
     silent = set_logging_level(args)
 
     if args.protocol == 'test':
-        [x1, e1] = test_metropolis(10000, 100)
+        [x1, e1] = test_metropolis(10000, N=1, dim=3)
+        [x2, e2] = test_metropolis(10000, N=1, dim=30)
+        [x3, e3] = test_metropolis(10000, N=1, dim=300)
+        [x4, e4] = test_metropolis(10000, N=1, dim=3000)
+        [x5, e5] = test_metropolis(10000, N=1, dim=30000)
         nn = len(e1)
 
         working_directory = os.getcwd()
 
-        plt.plot(np.linspace(1, nn, nn), e1, 'k')
+        plt.plot(np.linspace(1, nn, nn), e1, 'k', label="3")
+        plt.plot(np.linspace(1, nn, nn), e2, 'g', label="30")
+        plt.plot(np.linspace(1, nn, nn), e3, 'b', label="300")
+        plt.plot(np.linspace(1, nn, nn), e4, 'r', label="3000")
+        plt.plot(np.linspace(1, nn, nn), e5, 'c', label="30000")
         plt.ylabel("Energy")
         plt.xlabel("Monte Carlo Time")
         plt.savefig(os.path.join(working_directory, 'test.pdf'), dpi=300,

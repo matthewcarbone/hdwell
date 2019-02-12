@@ -14,13 +14,15 @@ import numpy as np
 AVAILABLE_P_TYPES = ['quad']
 
 
-def potential_surface(x, ptype='quad', gamma=1.0):
+def potential_surface(x, dim, ptype='quad', gamma=1.0):
     """The potential energy as a function of some input `x`.
 
     Parameters
     ----------
     x : array_like
         Usually the positions of an ensemble of particles.
+    dim : int
+        The dimension of each particle.
     ptype : str
         Available potential energies. Default is 'quad'. Available options:
         - 'quad' : Simple harmonic oscillator form v = gamma*x*x.
@@ -30,6 +32,9 @@ def potential_surface(x, ptype='quad', gamma=1.0):
 
     if ptype not in AVAILABLE_P_TYPES:
         raise RuntimeError("Fatal: invalid potential surface type `ptype`.")
+
+    # Normalize by the dimension
+    x /= np.sqrt(dim)
 
     if ptype == 'quad':
         return gamma * np.sum(x**2)
