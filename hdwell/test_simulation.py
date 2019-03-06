@@ -13,16 +13,20 @@ from tqdm import tqdm
 from .auxiliary.aux import potential_surface, accept_canonical, delta_E
 
 
-BETA = 100.0
+BETA = 0.1
 
 
-def test_metropolis(nMC, N=1, dim=3, default_scale=1.0, delta_scale=0.5):
+def test_metropolis(nMC, N=1, dim=3, default_scale=1.0, delta_scale=0.005):
+
+    # Random starting point
     x0 = np.random.normal(scale=default_scale, size=(N, dim))
     e0 = potential_surface(x0, dim)
 
     positions = np.empty((N, dim, nMC))
     energy = []
     accepted = 0
+
+    lmbd = 1.0 / delta_scale
 
     for ii in tqdm(range(nMC)):
 
@@ -33,11 +37,15 @@ def test_metropolis(nMC, N=1, dim=3, default_scale=1.0, delta_scale=0.5):
             np.testing.assert_equal(random_particle, 0)
 
         # Generate some normal displacement delta.
-        delta = np.random.normal(scale=delta_scale, size=(1, dim))
+        delta = np.random.exponential(scale=lmbd)
 
-        # Push one particle by delta.
-        xf = x0.copy()
-        xf[random_particle] = xf[random_particle] + delta
+        # Pick a random point on the (N-1)-dimensional hypersphere surface.
+        # This should be standard normal.
+        vecX = np.random.normal(size=(1, dim))
+
+        # Normalize, and shift it to the location of x.
+        vecX = vecX / np.sqrt(np.sum(vecX**2, axis=1, keepdims=True)) * delta
+        xf = vecX + x0
 
         # Calculate final energies and acceptance probabilities.
         ef = potential_surface(xf, dim)
