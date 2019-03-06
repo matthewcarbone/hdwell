@@ -1,0 +1,79 @@
+# Parameter file: read by run.py
+#     This is the main parameter file for executing the hdwell source code. In
+#     general, parameters here can be overridden by command line flags. Note
+#     that this parameter file should always be in the working directory:
+#     ~/.../hdwell, else it will not be located.
+# 
+# Matthew R. Carbone & Marco Baity-Jesi
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Execution Parameters --------------------------------------------------------
+#     All permutations of parameters listed will be executed independently. The
+#     parameters represent the following system properties:
+#         beta : list of floats
+#             Inverse temperature (1/T).
+#         dims : list of integers
+#             Dimensionality of the system.
+#         nmc : list of integers
+#             The number of monte carlo time steps will be equal to 10^nmc[i],
+#             where `i` is some entry in the list. Note that the runtime will
+#             scale like Theta(10^nmc).
+#         nvec : list of integers
+#             Number of independent "particles" in the "ensemble". Observables
+#             will be averaged over this axis.
+
+beta:  [130.0, 150.0, 170.0]
+dims:  [90, 100, 110]
+nmc:   [6]
+nvec:  [200]
+
+
+# Observables -----------------------------------------------------------------
+#     Dictionary of boolean values which represent which observables to report.
+#     Note that generally all should be True since there isn't really any
+#     extra overhead to calculating more observables.
+#         average_energy : bool
+#             Average value of the energy averaged across the ensemble.
+#         psi_basin : bool
+#             Compute the histogram of time spent in basins (below the
+#             threshold energy).
+#         psi_config : bool
+#             Compute the histogram of time spent in configurations before
+#             accepting a new one.
+#         memory: bool
+#             Compute the memory function.
+#         n_samples : int
+#             The total number of times to sample the average energy. Ignored
+#             if average_energy is set to False. Note that energy will always
+#             be sampled on a logarithmic scale.
+#         smart_sampling : bool
+#             If set to True, utilizes the sampling algorithm on the unit
+#             n-ball. If False, will sample randomly in an n-dimensional space
+#             and retain only points that fall within the unit n-ball. That is
+#             very slow, since in the n -> inf limit all points fall on the
+#             surface.
+
+observables:
+  average_energy:  True
+  psi_basin:       True
+  psi_config:      True
+  memory:          True
+
+n_samples:         10000
+smart_sampling :   True
+
+
+# Danger zone -----------------------------------------------------------------
+#     If set to false, anything here can be considered as "safe." Otherwise,
+#     they may have adverse affect on system performance or worse, memory and
+#     storage. Please know what you're doing if changing any of these to True,
+#     as some unwanted consequences could be including but not limited to
+#     saving multiple TB of configurations to disk.
+#         save_all_configs : bool
+#             As the name implies, if set to True, all configurations
+#             (which means the nmc x nvec-dimensional matrix) will be saved to
+#             disk as a pickle file. Warnings will be prompted to the user
+#             before execution with this set to True, as the amount of storage
+#             this could take up can get out of hand very quickly.
+
+save_all_configs: False
