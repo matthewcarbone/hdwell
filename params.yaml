@@ -7,6 +7,19 @@
 # Matthew R. Carbone & Marco Baity-Jesi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Protocol --------------------------------------------------------------------
+#     Determines the kind of run we will be doing. Default to pure monte carlo
+#     sampling on the unit ball. The protocols are as follows:
+#         protocol : int
+#             1 - Sample on the unit ball in a purely random fashion.
+#         directory_override : str
+#             Directory to which a data file should be created and all data
+#             saved. Special option is 'wd', which stands for working
+#             directory. Otherwise, specify the absolute path.
+
+protocol: 1
+directory_override: 'wd'
+
 # Execution Parameters --------------------------------------------------------
 #     All permutations of parameters listed will be executed independently. The
 #     parameters represent the following system properties:
@@ -21,11 +34,20 @@
 #         nvec : list of integers
 #             Number of independent "particles" in the "ensemble". Observables
 #             will be averaged over this axis.
+#         lmbdp : float
+#             Value of lambda prime (lmbdp = lambda*N).
+#         ptype : str
+#             Type of potential we're considering. Current choices are listed
+#             in aux.py.
 
-beta:  [130.0, 150.0, 170.0]
-dims:  [90, 100, 110]
-nmc:   [6]
-nvec:  [200]
+execution_parameters:
+  beta:  [130.0, 150.0, 170.0]
+  dims:  [90, 100, 110]
+  nmc:   [6]
+  nvec:  [200]
+
+lmbdp: 1.0
+ptype: 'log'
 
 
 # Observables -----------------------------------------------------------------
@@ -33,7 +55,8 @@ nvec:  [200]
 #     Note that generally all should be True since there isn't really any
 #     extra overhead to calculating more observables.
 #         average_energy : bool
-#             Average value of the energy averaged across the ensemble.
+#             Average value of the energy averaged across the ensemble. It is
+#             sampled on a logarithmic scale.
 #         psi_basin : bool
 #             Compute the histogram of time spent in basins (below the
 #             threshold energy).
@@ -42,10 +65,8 @@ nvec:  [200]
 #             accepting a new one.
 #         memory: bool
 #             Compute the memory function.
-#         n_samples : int
-#             The total number of times to sample the average energy. Ignored
-#             if average_energy is set to False. Note that energy will always
-#             be sampled on a logarithmic scale.
+#         n_report : int
+#             Total number of reports per job piped to output.
 #         smart_sampling : bool
 #             If set to True, utilizes the sampling algorithm on the unit
 #             n-ball. If False, will sample randomly in an n-dimensional space
@@ -59,7 +80,7 @@ observables:
   psi_config:      True
   memory:          True
 
-n_samples:         10000
+n_report:          1000
 smart_sampling :   True
 
 

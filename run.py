@@ -7,18 +7,28 @@ __status__ = "Prototype"
 
 """Execution file for the hdwell project. Details to follow."""
 
-import numpy as np
 import argparse
 import logging
+import yaml
 import os
-import matplotlib.pyplot as plt
 
 from hdwell import logger
-from hdwell.test_simulation import test_metropolis
+from hdwell.execute import run_all
+
 lg = logging.getLogger(__name__)
 
+WORKDIR = os.getcwd()
+HOMEDIR = os.path.expanduser("~")
+PROTOCOL_CHOICES = ['actual']
 
-PROTOCOL_CHOICES = ['test']
+
+def get_target_dir(directory_override):
+    if directory_override is None:
+        return HOMEDIR
+    elif directory_override == 'wd':
+        return WORKDIR
+    else:
+        return directory_override
 
 
 def parser():
@@ -34,8 +44,11 @@ def parser():
     ap.add_argument('--nolog', action='store_true', dest='nolog',
                     default=False, help='force LOG file output to warning '
                                         'level')
+    ap.add_argument('--noprompt', action='store_false', dest='prompt',
+                    default=True, help='ignore prompts')
+
     ap.add_argument('-p', '--protocol', dest='protocol',
-                    choices=PROTOCOL_CHOICES,
+                    choices=PROTOCOL_CHOICES, default='actual',
                     help='set the protocol for the run')
 
     return ap.parse_args()
@@ -51,8 +64,6 @@ def set_logging_level(args):
         raise RuntimeError("Cannot run in both debug and info mode "
                            "simultaneously.")
 
-    silent = True
-
     if args.debug and not args.info:
         logger.fh.setLevel(logging.DEBUG)
         logger.ch.setLevel(logging.DEBUG)
@@ -64,39 +75,15 @@ def set_logging_level(args):
     else:
         logger.fh.setLevel(logging.INFO)
         logger.ch.setLevel(logging.ERROR)
-        silent = False
 
     if args.nolog:
         logger.fh.setLevel(logging.WARNING)
 
-    return silent
-
 
 if __name__ == '__main__':
     args = parser()
-    silent = set_logging_level(args)
+    set_logging_level(args)
 
-    if args.protocol == 'test':
-        [x1, e1] = test_metropolis(10000)
-        nn = len(e1)
-
-        working_directory = os.getcwd()
-
-        plt.plot(np.linspace(1, nn, nn), e1, 'k', label="10")
-        m = np.mean(e1)
-        plt.plot((0, 10000), (m, m), 'r--')
-        plt.ylabel("Energy")
-        plt.xlabel("Monte Carlo Time")
-        plt.savefig(os.path.join(working_directory, 'e.pdf'), dpi=300,
-                    bbox_inches='tight')
-
-        plt.clf()
-        plt.plot(np.linspace(1, nn, nn),
-                 np.sqrt(np.sum(x1**2, axis=1)).squeeze(),
-                 'k', label="10")
-        m = np.mean(np.sqrt(np.sum(x1**2, axis=1)))
-        plt.plot((0, 10000), (m, m), 'r--')
-        plt.ylabel("Radius")
-        plt.xlabel("Monte Carlo Time")
-        plt.savefig(os.path.join(working_directory, 'x.pdf'), dpi=300,
-                    bbox_inches='tight')
+    params = yaml.safe_load(open(os.path.join(WORKDIR, "params.yaml")))
+    target_directory = get_target_dir(params['directory_override'])
+    run_all(params, target_directory, prompt=args.prompt)
