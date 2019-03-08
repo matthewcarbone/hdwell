@@ -5,7 +5,24 @@ __maintainer__ = "Matthew R. Carbone & Marco Baity-Jesi"
 __email__ = "x94carbone@gmail.com"
 __status__ = "Prototype"
 
-"""Execution file for the hdwell project. Details to follow."""
+"""Execution file for the hdwell project. The general workflow of this code
+goes as follows.
+    1. Command line arguments and yaml paramter file are read in here and
+       passed to the `run_all` function. Note that parameter files may be
+       overwritten by command line arguments.
+    2. `run_all` (part of execute.py) summarizes the details of the current
+       run and will prompt the user (unless --noprompt flag) to continue with
+       the specified execution protocol. If the user agrees to continue, then
+       `run_all` will pass to the particular function for that protocol.
+    3. Specific protocol functions e.g. `execute_protocol_1` parse the
+       parameters as necessary and (if necessary) provide final user prompts.
+       After the user agrees to continue, it runs bash scripts via the
+       subprocess library, submitting the jobs to the SLURM job controller, or
+       local machine if specified.
+    4. The sub.py file contains scripts that are *meant to be called directly*
+       by other functions in this package and run on the compute nodes. The
+       bash/sbatch scripts will always call sub.py directly.
+"""
 
 import argparse
 import logging

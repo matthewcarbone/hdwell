@@ -21,12 +21,79 @@ TIME_ESTIMATOR_CONV = 2.5e-9  # hrs per particle per mc timestep
 PROTOCOL_DICT = {
     1: "sample on the unit ball in a purely random fashion"
 }
+WARNING_MSG_LOCAL = """
+Warning: you're attempting to run this on your local machine.
+         This job could take days. Do you still wish to continue?
+
+Proceed? (y for yes)
+"""
+
+
+def execute_protocol_1(params, p, target_run_directory, cluster=True,
+                       prompt=True):
+    executable = 'sbatch'
+
+    if not cluster and prompt:
+        ans = input(WARNING_MSG_LOCAL)
+        if ans == 'y':
+            executable = 'bash'
+        else:
+            return
+
+    process = subprocess.Popen("mv scripts/actual1.sbatch .",
+                               shell=True, stdout=subprocess.PIPE)
+    process.wait()
+
+    exitcodes = []
+    clean = True
+
+    # Recall: `p` is a list of all permutations of the input parameters.
+    for p_ in p:
+        beta = p_['beta']
+        dim = p_['dims']
+        nmc = p_['nmc']
+        nvec = p_['nvec']
+        lmbdp = params['lmbdp']
+        ptype = params['ptype']
+        report_energy = int(params['observables']['average_energy'])
+        report_psi_basin = int(params['observables']['psi_basin'])
+        report_psi_config = int(params['observables']['psi_config'])
+        report_memory = int(params['observables']['memory'])
+        n_report = params['n_report']
+        execution_string = \
+            "%s actual1.sbatch 1 %f %i %i %i %f %s %i %i %i %i %s %i" \
+            % (executable, beta, dim, nmc, nvec, lmbdp, ptype,
+               report_energy, report_psi_basin, report_psi_config,
+               report_memory, target_run_directory, n_report)
+        process = subprocess.Popen(execution_string, shell=True,
+                                   stdout=subprocess.PIPE,
+                                   universal_newlines=True)
+        process.wait()
+        out, __ = process.communicate()
+        print(out)
+        exitcode = process.returncode
+        exitcodes.append(exitcode)
+        break
+
+        if exitcode != 0:
+            clean = False
+
+    process = subprocess.Popen("mv actual1.sbatch scripts/", shell=True,
+                               stdout=subprocess.PIPE)
+    process.wait()
+
+    if clean:
+        lg.info("Clean submission (protocol 1) ~ DONE")
+    else:
+        lg.error("Execution failed")
+        lg.error("Error codes %a" % exitcodes)
 
 
 def run_all(params, target_directory, prompt=True):
     """DOCSTRING: TODO"""
 
     p = execution_parameters_permutations(params['execution_parameters'])
+    cluster = not params['run_on_local']
     protocol = params['protocol']
     Np = len(p)
     max_nmc = np.max(params['execution_parameters']['nmc'])
@@ -40,7 +107,7 @@ def run_all(params, target_directory, prompt=True):
               % (protocol, PROTOCOL_DICT[protocol]))
         print("    * Datetime directory %s will be created in" % dt)
         print("      %s" % target_data_directory)
-        print("    * Total of %i independent jobs will be submitted via SLURM"
+        print("    * Total of %i independent jobs will be submitted run"
               % Np)
         print("    * Longest job runtime contains 10^%i monte carlo timesteps"
               % max_nmc)
@@ -70,4 +137,5 @@ def run_all(params, target_directory, prompt=True):
 
     lg.info("Proceeding to execute protocol %i" % protocol)
     if protocol == 1:
-        pass
+        execute_protocol_1(params, p, target_run_directory,
+                           cluster=cluster, prompt=prompt)

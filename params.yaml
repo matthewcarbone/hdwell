@@ -43,7 +43,7 @@ directory_override: 'wd'
 execution_parameters:
   beta:  [130.0, 150.0, 170.0]
   dims:  [90, 100, 110]
-  nmc:   [6]
+  nmc:   [2]
   nvec:  [200]
 
 lmbdp: 1.0
@@ -80,7 +80,7 @@ observables:
   psi_config:      True
   memory:          True
 
-n_report:          1000
+n_report:          100
 smart_sampling :   True
 
 
@@ -96,5 +96,11 @@ smart_sampling :   True
 #             disk as a pickle file. Warnings will be prompted to the user
 #             before execution with this set to True, as the amount of storage
 #             this could take up can get out of hand very quickly.
+#         run_on_local : bool
+#             Will attempt to submit the jobs to your local machine. Not so
+#             much dangerous as perhaps time consuming. Although given the
+#             length of some of these jobs, your CPU might overhead and
+#             explode. Use at your own risk!
 
 save_all_configs: False
+run_on_local:     True
