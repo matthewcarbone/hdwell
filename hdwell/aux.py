@@ -16,6 +16,7 @@ import pickle
 from time import time
 from itertools import product
 from collections import Counter
+# import matplotlib.pyplot as plt
 
 from . import logger  # noqa
 lg = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def current_datetime():
     for tagging files."""
 
     now = datetime.datetime.now()
-    dt = now.strftime("%Y-%m-%d-%H-%M")
+    dt = now.strftime("%Y-%m-%d-%H-%M-%S")
     lg.info("Datetime logged as %s" % dt)
     return dt
 
@@ -147,10 +148,10 @@ def execution_parameters_permutations(dictionary):
 def thresholds(N, beta, lambdaprime, ptype='log'):
     """Returns the threshold radius and energy."""
 
-    if beta == N:
+    if beta == 1:
         r = np.exp(-1.0 / N)
     else:
-        r = (2.0 - beta / N)**(1.0 / (beta - N))
+        r = (2.0 - beta)**(1.0 / (N * beta - N))
 
     if ptype == 'log':
         e = N * np.log(r) / lambdaprime
@@ -160,8 +161,15 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
     return [r, e]
 
 
-def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
-                     data_directory):
+def plotting_tool(data_path, params):
+    """Plots all data available in the `DATA_hdwell` directory."""
+
+    # TODO
+    pass
+
+
+def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
+                     data_directory, save_all_energies):
     """Executes a purely random sampling algorithm over the unit N-ball.
     Note that this function is meant to be called from within a compute node.
     It is assumed that all output will be piped to a SLURM (or related) output
@@ -180,34 +188,35 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
         literature precedent. Ultimately, lambdaprime=1 is a good default and
         probably should not be changed. This scaling also guarantees an
         extensive energy with respect to the dimension.
-    nMC : int
-        Total number of monte carlo timesteps to perform.
+    nMC_lg : int
+        Total number of monte carlo timesteps to perform is 10^nMC_lg
     n_vec : int
         Total number of "particles" in the "ensemble".
     ptype : str
         Determines the energy of the system (fixes the form of the potential
         energy).
-    obs : dict
-        Python dictionary of boolean values and keys corresponding to which
-        observables to report. Generally, we should report all observables,
-        as there is no extra overhead.
     n_report : int
         Report progress (pipe to output) everytime the simulation reaches this
         many timesteps.
     data_directory : str
         Absolute path to the location of the data directory to which
         observables will be saved.
+    save_all_energies : bool
+        If true, will save the 10^nMC-dimensional vector containing the average
+        energies at every timestep.
     """
 
-    nMC = 10**nMC
+    nMC = int(10**nMC_lg)
     lambd_ = lambdaprime / N
     increment = int(nMC / n_report)  # TODO: if increment is 0
     zfill_index = order_of_magnitude(nMC) + 1
     [r_threshold, e_threshold] = thresholds(N, beta, lambdaprime, ptype=ptype)
 
-    x0 = sample_nball(N, nMC=1, n_vec=n_vec)  # Get the initial position
+    print(e_threshold)
+
+    x0 = sample_nball(N, nMC=1, n_vec=n_vec)     # Get the initial position
     e0 = energy(x0, lmbd=lambd_, ptype=ptype)    # Initial energy
-    t0 = time()                                 # Initial time
+    t0 = time()                                  # Initial time
 
     # Initialize empty dictionaries/arrays for each possible observable
     # (except the memory, done later). For the dictionaries, the key will be
@@ -228,10 +237,18 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
     # Timesteps at which to sample the energy.
-    sample_e = np.logspace(0, nMC, nMC + 1, dtype=int)
+    sample_e = np.logspace(0, nMC_lg, nMC_lg + 1, dtype=int)
+
+    # Initialize the energy vector if report save all energies is true.
+    if save_all_energies:
+        all_e = np.empty((nMC, n_vec))
+
+    # Temporarily ignore overflow warnings, since exp(large number) = inf and
+    # this is fine for the code.
+    np.seterr(over='ignore')
 
     # Begin the MC process.
-    for ii in range(1, 100):
+    for ii in range(nMC):
 
         # Report at designated timesteps.
         if ii % increment == 0:
@@ -239,7 +256,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
             print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h"
                   % (str(ii).zfill(zfill_index), str(nMC).zfill(zfill_index),
                      (ii / nMC * 100.0), ((ctime - t0) / 3600.0),
-                     ((ctime - t0) / 3600.0 * nMC / ii)))
+                     ((ctime - t0) / 3600.0 * nMC / (ii + 1))))
+
+        if save_all_energies:
+            all_e[ii, :] = e0
 
         # Generate a new configuration.
         xf = sample_nball(N, nMC=1, n_vec=n_vec)
@@ -257,6 +277,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
         dE_up = np.where((deltaE >= 0.0) & (rand_vec <= w_vec))[1]
         dE_stay = np.where((deltaE >= 0.0) & (rand_vec > w_vec))[1]
 
+        # Update the xf vector where necessary.
+        xf[:, :, dE_stay] = x0[:, :, dE_stay]
+        ef[:, dE_stay] = e0[:, dE_stay]
+
         # Append the basin / config. First, the configurations in which a move
         # was rejected stay in the same configuration, so those entries += 1
         # in the n_config counter.
@@ -266,31 +290,36 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
         # given configuration.
         config_up = n_config[dE_up]
         config_down = n_config[dE_down]
-        lg.info("%a" % config_up)
-        lg.info("%a" % config_down)
         counter_up = Counter(int(floor(log10(x__))) for x__ in config_up)
         counter_down = Counter(int(floor(log10(x__))) for x__ in config_down)
 
         # Tricky dictionary manipulation with the Counter class, keys are the
         # order of magnitude, values are added between dictionaries (or
         # created if they did not exist).
-        psi_config += counter_up + counter_down
+        psi_config = psi_config + counter_up + counter_down
 
         # Then reset the counters after logging them.
         n_config[dE_up] = 1
         n_config[dE_down] = 1
 
-        # Next, update the basin counter. First, determine which new energies
-        # are below the threshold.
-        below = np.where(ef < e_threshold)[1]
+        # Next, update the basin counter. First, determine configurations that
+        # have entered a basin.
+        entered_basin = np.where((ef < e_threshold) & (e0 >= e_threshold))[1]
 
-        # Wherever the energy is below threshold, add to counter.
-        n_basin[below] += 1
+        # Also, determine the configurations that were in a basin, and still
+        # in the basin.
+        still_in_basin = np.where((ef < e_threshold) & (e0 < e_threshold))[1]
 
-        # Now there are two cases. If the prior energy was in a basin but just
-        # exited, we need to log it.
-        exited_basin = np.where((e0 < e_threshold) & (ef >= e_threshold) &
-                                (n_basin != 0))[1]
+        # In these two cases, add to counter.
+        n_basin[entered_basin] += 1
+        n_basin[still_in_basin] += 1
+
+        # Now there are two cases. Note that if e0, ef > e_threshold, there's
+        # nothing to do, as this configuration, and its prior one lie above the
+        # cutoff. However, if a configuration exits a basin, meaning that
+        # e0 < e_threshold and ef >= e_threshold,  it needs to be recorded.
+        exited_basin = np.where((e0 < e_threshold) & (ef >= e_threshold))[1]
+
         exited_basin_cc = n_basin[exited_basin]
         basin_log = Counter(int(floor(log10(x__))) for x__ in exited_basin_cc)
         psi_basin += basin_log
@@ -298,7 +327,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
         # And reset.
         n_basin[exited_basin] = 0
 
-        # Update.
+        # Now the xf's become the x0's for the next iteration.
         x0[:, :, dE_down] = xf[:, :, dE_down]
         x0[:, :, dE_up] = xf[:, :, dE_up]
         e0[:, dE_down] = ef[:, dE_down]
@@ -306,7 +335,12 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
 
         # Get the average energy if the timestep warrents it.
         if ii in sample_e:
-            avg_e.append(np.mean(ef))
+            avg_e.append(np.mean(e0))
+
+    # Reset the overflow warnings.
+    np.seterr(over='warn')
+
+    avg_e_path = "avg_e_"
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
@@ -316,3 +350,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC, n_vec, ptype, obs, n_report,
     pickle.dump(psi_basin,
                 open(os.path.join(data_directory, "psi_basin.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
+    if save_all_energies:
+        pickle.dump([all_e],
+                    open(os.path.join(data_directory, "all_e.pkl"), 'wb'),
+                    protocol=pickle.HIGHEST_PROTOCOL)

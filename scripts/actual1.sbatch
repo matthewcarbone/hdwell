@@ -14,12 +14,8 @@
 #    05: Length of the vector (number of "particles" in the "ensemble")
 #    06: Lambdaprime
 #    07: Potential type
-#    08: Report energy
-#    09: Report psi basin
-#    10: Report psi config
-#    11: Report memory
-#    12: Target run directory to save observables
-#    13: Number of times to report
+#    08: Target run directory to save observables
+#    09: Number of times to report
+#    10: Save all energies?
 
-python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" \
-"${11}" "${12}" "${13}"
+python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"

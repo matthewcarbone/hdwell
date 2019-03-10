@@ -41,30 +41,18 @@ directory_override: 'wd'
 #             in aux.py.
 
 execution_parameters:
-  beta:  [130.0, 150.0, 170.0]
-  dims:  [90, 100, 110]
+  beta:  [1.5] # [130.0, 150.0, 170.0]
+  dims:  [3] # [90, 100, 110]
   nmc:   [2]
-  nvec:  [200]
+  nvec:  [1]
 
 lmbdp: 1.0
 ptype: 'log'
 
 
-# Observables -----------------------------------------------------------------
-#     Dictionary of boolean values which represent which observables to report.
-#     Note that generally all should be True since there isn't really any
-#     extra overhead to calculating more observables.
-#         average_energy : bool
-#             Average value of the energy averaged across the ensemble. It is
-#             sampled on a logarithmic scale.
-#         psi_basin : bool
-#             Compute the histogram of time spent in basins (below the
-#             threshold energy).
-#         psi_config : bool
-#             Compute the histogram of time spent in configurations before
-#             accepting a new one.
-#         memory: bool
-#             Compute the memory function.
+# Reporting and Sampling ------------------------------------------------------
+#     The average energy, psi_basin, psi_configuration and memory are always
+#     going to be reported.
 #         n_report : int
 #             Total number of reports per job piped to output.
 #         smart_sampling : bool
@@ -74,23 +62,17 @@ ptype: 'log'
 #             very slow, since in the n -> inf limit all points fall on the
 #             surface.
 
-observables:
-  average_energy:  True
-  psi_basin:       True
-  psi_config:      True
-  memory:          True
-
 n_report:          100
 smart_sampling :   True
 
 
 # Danger zone -----------------------------------------------------------------
-#     If set to false, anything here can be considered as "safe." Otherwise,
+#     If set to False, anything here can be considered as "safe." Otherwise,
 #     they may have adverse affect on system performance or worse, memory and
 #     storage. Please know what you're doing if changing any of these to True,
 #     as some unwanted consequences could be including but not limited to
 #     saving multiple TB of configurations to disk.
-#         save_all_configs : bool
+#         save_all_energies : bool
 #             As the name implies, if set to True, all configurations
 #             (which means the nmc x nvec-dimensional matrix) will be saved to
 #             disk as a pickle file. Warnings will be prompted to the user
@@ -101,6 +83,10 @@ smart_sampling :   True
 #             much dangerous as perhaps time consuming. Although given the
 #             length of some of these jobs, your CPU might overhead and
 #             explode. Use at your own risk!
+#         pipe_all_to_LOG : bool
+#             Pipes all the output of the submission script to the log file.
 
-save_all_configs: False
-run_on_local:     True
+danger:
+  save_all_energies:  True
+  run_on_local:       True
+  pipe_all_to_LOG:    False  # Not yet implemented

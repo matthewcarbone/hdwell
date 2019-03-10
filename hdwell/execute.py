@@ -33,12 +33,8 @@ def execute_protocol_1(params, p, target_run_directory, cluster=True,
                        prompt=True):
     executable = 'sbatch'
 
-    if not cluster and prompt:
-        ans = input(WARNING_MSG_LOCAL)
-        if ans == 'y':
-            executable = 'bash'
-        else:
-            return
+    if not cluster:
+        executable = 'bash'
 
     process = subprocess.Popen("mv scripts/actual1.sbatch .",
                                shell=True, stdout=subprocess.PIPE)
@@ -55,25 +51,20 @@ def execute_protocol_1(params, p, target_run_directory, cluster=True,
         nvec = p_['nvec']
         lmbdp = params['lmbdp']
         ptype = params['ptype']
-        report_energy = int(params['observables']['average_energy'])
-        report_psi_basin = int(params['observables']['psi_basin'])
-        report_psi_config = int(params['observables']['psi_config'])
-        report_memory = int(params['observables']['memory'])
         n_report = params['n_report']
+        d_save_energies = int(params['danger']['save_all_energies'])
+
         execution_string = \
-            "%s actual1.sbatch 1 %f %i %i %i %f %s %i %i %i %i %s %i" \
+            "%s actual1.sbatch 1 %f %i %i %i %f %s %s %i %i" \
             % (executable, beta, dim, nmc, nvec, lmbdp, ptype,
-               report_energy, report_psi_basin, report_psi_config,
-               report_memory, target_run_directory, n_report)
+               target_run_directory, n_report, d_save_energies)
         process = subprocess.Popen(execution_string, shell=True,
                                    stdout=subprocess.PIPE,
                                    universal_newlines=True)
         process.wait()
         out, __ = process.communicate()
-        print(out)
         exitcode = process.returncode
         exitcodes.append(exitcode)
-        break
 
         if exitcode != 0:
             clean = False
@@ -93,7 +84,7 @@ def run_all(params, target_directory, prompt=True):
     """DOCSTRING: TODO"""
 
     p = execution_parameters_permutations(params['execution_parameters'])
-    cluster = not params['run_on_local']
+    cluster = not params['danger']['run_on_local']
     protocol = params['protocol']
     Np = len(p)
     max_nmc = np.max(params['execution_parameters']['nmc'])

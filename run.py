@@ -22,6 +22,30 @@ goes as follows.
     4. The sub.py file contains scripts that are *meant to be called directly*
        by other functions in this package and run on the compute nodes. The
        bash/sbatch scripts will always call sub.py directly.
+
+Running Modes
+-------------
+The `run.py` file may be ran in three main ways: normal, info, and debug.
+    debug : all tqdm progress bars will be suppressed and the logger will be
+run in debug mode accross all modules. This will pipe all output to the console
+and to the log file `LOG`.
+    info : tqdm progress bars will also be suppressed, all output including
+debug will be piped to `LOG`, but the logger module will only pipe info and
+above to the console.
+    normal : the logger will be run in error mode such that only errors and
+criticals will be piped to the console (interrupting the tqdm progress bars),
+and the `LOG` file will contain information at the info level (so no debug info
+will be piped to `LOG`).
+
+Command Line Flags
+------------------
+As noted above, `--debug`, `--info` and `--nolog` control the logging style.
+The protocol is set with the `-p` flag and defaults to `actual`, which is
+currently the only running mode and performs the standard execution.
+    A dangerous command is `--force`. This ignores minor prompts, safety
+measures and console info: anything not in the danger zone. The more dangerous
+command is `--fullforce` which ignores ALL warnings, including those in the
+danger zone.
 """
 
 import argparse
@@ -31,12 +55,14 @@ import os
 
 from hdwell import logger
 from hdwell.execute import run_all
+from hdwell.aux import plotting_tool
+from hdwell.templates import DANGER_ZONE_TEMPLATE
 
 lg = logging.getLogger(__name__)
 
 WORKDIR = os.getcwd()
 HOMEDIR = os.path.expanduser("~")
-PROTOCOL_CHOICES = ['actual']
+PROTOCOL_CHOICES = ['actual', 'plot']
 
 
 def get_target_dir(directory_override):
@@ -46,6 +72,23 @@ def get_target_dir(directory_override):
         return WORKDIR
     else:
         return directory_override
+
+
+def danger_zone_warnings(d):
+    all_false = True
+    for key, value in d.items():
+        if value:
+            all_false = False
+
+    if all_false:
+        return
+
+    template = DANGER_ZONE_TEMPLATE.format(all_energies=d['save_all_energies'],
+                                           local=d['run_on_local'],
+                                           log_all=d['pipe_all_to_LOG'])
+    x = input(template)
+    if x != 'y':
+        exit(0)
 
 
 def parser():
@@ -61,8 +104,11 @@ def parser():
     ap.add_argument('--nolog', action='store_true', dest='nolog',
                     default=False, help='force LOG file output to warning '
                                         'level')
-    ap.add_argument('--noprompt', action='store_false', dest='prompt',
-                    default=True, help='ignore prompts')
+    ap.add_argument('-f', '--force', action='store_false', dest='prompt',
+                    default=True, help='ignore minor warning prompts')
+    ap.add_argument('-F', '--full_force', action='store_false',
+                    dest='prompt_major',
+                    default=True, help='ignore all warning prompts')
 
     ap.add_argument('-p', '--protocol', dest='protocol',
                     choices=PROTOCOL_CHOICES, default='actual',
@@ -103,4 +149,19 @@ if __name__ == '__main__':
 
     params = yaml.safe_load(open(os.path.join(WORKDIR, "params.yaml")))
     target_directory = get_target_dir(params['directory_override'])
-    run_all(params, target_directory, prompt=args.prompt)
+
+    # Main protocol.
+    if args.protocol == 'actual':
+        lg.info("Running main protocol")
+        if not args.prompt_major:
+            args.prompt = False
+
+        if args.prompt_major:
+            danger_zone_warnings(params['danger'])
+
+        run_all(params, target_directory, prompt=args.prompt)
+
+    elif args.protocol == 'plot':
+        data_path = os.path.join(target_directory, 'DATA_hdwell')
+        lg.info("Plotting all data in %s" % data_path)
+        plotting_tool(data_path)
