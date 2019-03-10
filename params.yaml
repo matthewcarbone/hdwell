@@ -41,10 +41,10 @@ directory_override: 'wd'
 #             in aux.py.
 
 execution_parameters:
-  beta:  [1.5] # [130.0, 150.0, 170.0]
-  dims:  [3] # [90, 100, 110]
-  nmc:   [2]
-  nvec:  [1]
+  beta:  [0.1, 0.5, 1.0, 1.5, 2.0, 5.0] # [130.0, 150.0, 170.0]
+  dims:  [10, 100, 1000] # [90, 100, 110]
+  nmc:   [6]
+  nvec:  [500]
 
 lmbdp: 1.0
 ptype: 'log'
@@ -87,6 +87,6 @@ smart_sampling :   True
 #             Pipes all the output of the submission script to the log file.
 
 danger:
-  save_all_energies:  True
-  run_on_local:       True
+  save_all_energies:  False
+  run_on_local:       False
   pipe_all_to_LOG:    False  # Not yet implemented

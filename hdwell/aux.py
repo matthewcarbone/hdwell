@@ -16,6 +16,7 @@ import pickle
 from time import time
 from itertools import product
 from collections import Counter
+import secrets
 # import matplotlib.pyplot as plt
 
 from . import logger  # noqa
@@ -25,12 +26,7 @@ lg = logging.getLogger(__name__)
 AVAILABLE_P_TYPES = ['quad', 'log']
 
 
-def order_of_magnitude(x):
-    """Returns the base 10 order of magnitude of `x`."""
-
-    return int(log10(x))
-
-
+# Directory & Data Tools ------------------------------------------------------
 def makedir_if_not_exist(path, error_out=False):
     """Does exactly what is says it does: if the directory specified by `path`
     does not exist, create it."""
@@ -53,6 +49,18 @@ def current_datetime():
     dt = now.strftime("%Y-%m-%d-%H-%M-%S")
     lg.info("Datetime logged as %s" % dt)
     return dt
+
+
+def get_random_hash(n=16):
+    return secrets.token_hex(n)
+
+# -----------------------------------------------------------------------------
+
+
+def order_of_magnitude(x):
+    """Returns the base 10 order of magnitude of `x`."""
+
+    return int(log10(x))
 
 
 def energy(x, lmbd=1.0, ptype='log'):
@@ -169,7 +177,7 @@ def plotting_tool(data_path, params):
 
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
-                     data_directory, save_all_energies):
+                     data_directory, save_all_energies, verbose=True):
     """Executes a purely random sampling algorithm over the unit N-ball.
     Note that this function is meant to be called from within a compute node.
     It is assumed that all output will be piped to a SLURM (or related) output
@@ -212,8 +220,6 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     zfill_index = order_of_magnitude(nMC) + 1
     [r_threshold, e_threshold] = thresholds(N, beta, lambdaprime, ptype=ptype)
 
-    print(e_threshold)
-
     x0 = sample_nball(N, nMC=1, n_vec=n_vec)     # Get the initial position
     e0 = energy(x0, lmbd=lambd_, ptype=ptype)    # Initial energy
     t0 = time()                                  # Initial time
@@ -251,7 +257,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     for ii in range(nMC):
 
         # Report at designated timesteps.
-        if ii % increment == 0:
+        if ii % increment == 0 and verbose:
             ctime = time()
             print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h"
                   % (str(ii).zfill(zfill_index), str(nMC).zfill(zfill_index),
@@ -339,8 +345,6 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
     # Reset the overflow warnings.
     np.seterr(over='warn')
-
-    avg_e_path = "avg_e_"
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)

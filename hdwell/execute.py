@@ -9,9 +9,10 @@ import os
 import logging
 import subprocess
 import numpy as np
+import pandas as pd
 
 from .aux import execution_parameters_permutations, current_datetime
-from .aux import makedir_if_not_exist
+from .aux import makedir_if_not_exist, order_of_magnitude
 
 from . import logger  # noqa
 lg = logging.getLogger(__name__)
@@ -29,8 +30,10 @@ Proceed? (y for yes)
 """
 
 
-def execute_protocol_1(params, p, target_run_directory, cluster=True,
+def execute_protocol_1(params, target_run_directory, df, cluster=True,
                        prompt=True):
+    """Docstring TODO"""
+
     executable = 'sbatch'
 
     if not cluster:
@@ -44,20 +47,23 @@ def execute_protocol_1(params, p, target_run_directory, cluster=True,
     clean = True
 
     # Recall: `p` is a list of all permutations of the input parameters.
-    for p_ in p:
-        beta = p_['beta']
-        dim = p_['dims']
-        nmc = p_['nmc']
-        nvec = p_['nvec']
-        lmbdp = params['lmbdp']
-        ptype = params['ptype']
+    for index, row in df.iterrows():
+        beta = row['beta']
+        dim = row['N']
+        nmc = row['nmc']
+        nvec = row['nvec']
+        lmbdp = row['lambda_prime']
+        ptype = row['ptype']
         n_report = params['n_report']
         d_save_energies = int(params['danger']['save_all_energies'])
+
+        target_run_specific = os.path.join(target_run_directory, row['loc'])
 
         execution_string = \
             "%s actual1.sbatch 1 %f %i %i %i %f %s %s %i %i" \
             % (executable, beta, dim, nmc, nvec, lmbdp, ptype,
-               target_run_directory, n_report, d_save_energies)
+               target_run_specific, n_report, d_save_energies)
+
         process = subprocess.Popen(execution_string, shell=True,
                                    stdout=subprocess.PIPE,
                                    universal_newlines=True)
@@ -119,14 +125,28 @@ def run_all(params, target_directory, prompt=True):
     lg.info("Creating %s (only if it doesn't exist)" % target_run_directory)
     makedir_if_not_exist(target_run_directory, error_out=True)
 
-    # Make a copy of the yaml file and save it in the target_run_directory.
-    lg.info("Copying YAML parameter file to this run's data directory")
-    process = subprocess.Popen("cp %s/params.yaml %s"
-                               % (target_directory, target_run_directory),
-                               shell=True, stdout=subprocess.PIPE)
-    process.wait()
+    # Within the target_run_directory, create all sub-directories. Each
+    # corresponds to a different permutation of the parameters.
+    zfill_index = order_of_magnitude(Np) + 1
+    d = {
+        'beta': [p_['beta'] for p_ in p],
+        'N': [p_['dims'] for p_ in p],
+        'nmc': [p_['nmc'] for p_ in p],
+        'nvec': [p_['nvec'] for p_ in p],
+        'lambda_prime': [params['lmbdp'] for iii in range(Np)],
+        'ptype': [params['ptype'] for iii in range(Np)],
+        'protocol': [params['protocol'] for iii in range(Np)],
+        'loc': [str(iii).zfill(zfill_index) for iii in range(Np)]
+    }
+    df = pd.DataFrame(data=d)
+    df.to_csv(os.path.join(target_run_directory, 'params.csv'))
+
+    # Make subdirectory for each permutation.
+    for loc in d['loc']:
+        path__ = os.path.join(target_run_directory, loc)
+        makedir_if_not_exist(path__)
 
     lg.info("Proceeding to execute protocol %i" % protocol)
     if protocol == 1:
-        execute_protocol_1(params, p, target_run_directory,
+        execute_protocol_1(params, target_run_directory, df,
                            cluster=cluster, prompt=prompt)
