@@ -9,6 +9,7 @@ __status__ = "Prototype"
 
 import numpy as np
 import os
+import sys
 from math import floor, log10
 import logging
 import datetime
@@ -263,6 +264,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
                   % (str(ii).zfill(zfill_index), str(nMC).zfill(zfill_index),
                      (ii / nMC * 100.0), ((ctime - t0) / 3600.0),
                      ((ctime - t0) / 3600.0 * nMC / (ii + 1))))
+            sys.stdout.flush()
 
         if save_all_energies:
             all_e[ii, :] = e0

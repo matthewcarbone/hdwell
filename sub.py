@@ -29,8 +29,6 @@ if __name__ == '__main__':
     n_report = int(sys.argv[9])
     save_all_energies = bool(int(sys.argv[10]))
 
-    print(save_all_energies)
-
     if protocol == 1:
         protocol1(beta, dim, nmc, nvec, lambda_prime, ptype,
                   target_run_directory, n_report, save_all_energies)
