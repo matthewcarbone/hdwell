@@ -1,0 +1,92 @@
+# Parameter file: read by run.py
+#     This is the main parameter file for executing the hdwell source code. In
+#     general, parameters here can be overridden by command line flags. Note
+#     that this parameter file should always be in the working directory:
+#     ~/.../hdwell, else it will not be located.
+# 
+# Matthew R. Carbone & Marco Baity-Jesi
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Protocol --------------------------------------------------------------------
+#     Determines the kind of run we will be doing. Default to pure monte carlo
+#     sampling on the unit ball. The protocols are as follows:
+#         protocol : int
+#             1 - Sample on the unit ball in a purely random fashion.
+#         directory_override : str
+#             Directory to which a data file should be created and all data
+#             saved. Special option is 'wd', which stands for working
+#             directory. Otherwise, specify the absolute path.
+
+protocol: 1
+directory_override: 'wd'
+
+# Execution Parameters --------------------------------------------------------
+#     All permutations of parameters listed will be executed independently. The
+#     parameters represent the following system properties:
+#         beta : list of floats
+#             Inverse temperature (1/T).
+#         dims : list of integers
+#             Dimensionality of the system.
+#         nmc : list of integers
+#             The number of monte carlo time steps will be equal to 10^nmc[i],
+#             where `i` is some entry in the list. Note that the runtime will
+#             scale like Theta(10^nmc).
+#         nvec : list of integers
+#             Number of independent "particles" in the "ensemble". Observables
+#             will be averaged over this axis.
+#         lmbdp : float
+#             Value of lambda prime (lmbdp = lambda*N).
+#         ptype : str
+#             Type of potential we're considering. Current choices are listed
+#             in aux.py.
+
+execution_parameters:
+  beta:  [0.1, 0.5, 1.0, 1.5, 2.0, 5.0] # [130.0, 150.0, 170.0]
+  dims:  [10, 100, 1000] # [90, 100, 110]
+  nmc:   [6]
+  nvec:  [500]
+
+lmbdp: 1.0
+ptype: 'log'
+
+
+# Reporting and Sampling ------------------------------------------------------
+#     The average energy, psi_basin, psi_configuration and memory are always
+#     going to be reported.
+#         n_report : int
+#             Total number of reports per job piped to output.
+#         smart_sampling : bool
+#             If set to True, utilizes the sampling algorithm on the unit
+#             n-ball. If False, will sample randomly in an n-dimensional space
+#             and retain only points that fall within the unit n-ball. That is
+#             very slow, since in the n -> inf limit all points fall on the
+#             surface.
+
+n_report:          100
+smart_sampling :   True
+
+
+# Danger zone -----------------------------------------------------------------
+#     If set to False, anything here can be considered as "safe." Otherwise,
+#     they may have adverse affect on system performance or worse, memory and
+#     storage. Please know what you're doing if changing any of these to True,
+#     as some unwanted consequences could be including but not limited to
+#     saving multiple TB of configurations to disk.
+#         save_all_energies : bool
+#             As the name implies, if set to True, all configurations
+#             (which means the nmc x nvec-dimensional matrix) will be saved to
+#             disk as a pickle file. Warnings will be prompted to the user
+#             before execution with this set to True, as the amount of storage
+#             this could take up can get out of hand very quickly.
+#         run_on_local : bool
+#             Will attempt to submit the jobs to your local machine. Not so
+#             much dangerous as perhaps time consuming. Although given the
+#             length of some of these jobs, your CPU might overhead and
+#             explode. Use at your own risk!
+#         pipe_all_to_LOG : bool
+#             Pipes all the output of the submission script to the log file.
+
+danger:
+  save_all_energies:  False
+  run_on_local:       False
+  pipe_all_to_LOG:    False  # Not yet implemented
