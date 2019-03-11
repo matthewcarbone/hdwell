@@ -12,11 +12,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from tqdm import tqdm
+import logging
 from cycler import cycler
 
 from .aux import order_of_magnitude
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
+
+from . import logger  # noqa
+lg = logging.getLogger(__name__)
 
 # Custom color cycle.
 mpl.rcParams['axes.prop_cycle'] = cycler('color', ['b', 'c', '#ffdb00',
@@ -50,14 +53,16 @@ def plot_actual(run_path, plotting_params, df):
     zfill_index = order_of_magnitude(np.max(df['loc'].unique())) + 1
 
     # Clear past figures and initialize a new one.
+    # Average energy ----------------------------------------------------------
     plt.clf()
     plt.figure(figsize=(8.5, 11))
 
-    # Average energy.
     nMC_lg = df['nmc'].unique()[0]
     sample_e = np.logspace(0, nMC_lg, nMC_lg, dtype=int)
 
-    for ii, g in tqdm(enumerate(groups)):
+    lg.info("Average Energy...")
+    for ii, g in enumerate(groups):
+        lg.info("%i // %i" % (ii, g))
 
         plt.gca().set_prop_cycle(None)  # Reset colormap
         ax = plt.subplot(len(groups), 1, ii + 1)

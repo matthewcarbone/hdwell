@@ -237,7 +237,9 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
     # Timesteps at which to sample the energy.
-    sample_e = np.logspace(0, nMC_lg, nMC_lg + 1, dtype=int)
+    sample_e = np.logspace(0, nMC_lg, 10, dtype=int, endpoint=True)
+    print(sample_e)
+    exit(0)
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
@@ -248,7 +250,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='ignore')
 
     # Begin the MC process.
-    for ii in range(nMC):
+    for ii in range(nMC + 1):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
@@ -342,6 +344,9 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='warn')
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(sample_e,
+                open(os.path.join(data_directory, "sample_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(psi_config, open(os.path.join(data_directory,
                                               "psi_config.pkl"), 'wb'),
