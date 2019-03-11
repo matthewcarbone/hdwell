@@ -41,8 +41,8 @@ directory_override: 'wd'
 #             in aux.py.
 
 execution_parameters:
-  beta:  [0.1, 0.5, 1.0, 1.5, 2.0, 5.0] # [130.0, 150.0, 170.0]
-  dims:  [10, 100, 1000] # [90, 100, 110]
+  beta:  [0.1, 0.5, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 5.0]
+  dims:  [100]
   nmc:   [6]
   nvec:  [500]
 
@@ -90,3 +90,14 @@ danger:
   save_all_energies:  False
   run_on_local:       False
   pipe_all_to_LOG:    False  # Not yet implemented
+
+
+# Plotting --------------------------------------------------------------------
+#     Controls the protocol for automatic plotting using the plotting_tool()
+#     function in aux.py. See templates.py for a detailed description of what
+#     each protocol corresponds to.
+
+plot:
+  protocol:        1
+  dpi:             300
+  plots_per_page:  5

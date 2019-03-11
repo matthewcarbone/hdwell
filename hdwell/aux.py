@@ -10,7 +10,7 @@ __status__ = "Prototype"
 import numpy as np
 import os
 import sys
-from math import floor, log10
+from math import floor, log2, log10
 import logging
 import datetime
 import pickle
@@ -18,13 +18,13 @@ from time import time
 from itertools import product
 from collections import Counter
 import secrets
-# import matplotlib.pyplot as plt
 
 from . import logger  # noqa
 lg = logging.getLogger(__name__)
 
 
 AVAILABLE_P_TYPES = ['quad', 'log']
+ENERGY_SAMPLE = 1000
 
 
 # Directory & Data Tools ------------------------------------------------------
@@ -123,7 +123,7 @@ def execution_parameters_permutations(dictionary):
         hp2: [3, 4]
     }
 
-    and returns all permutations:
+    and returns a list of all permutations:
 
     eg1 = {
         hp1: 1
@@ -155,12 +155,13 @@ def execution_parameters_permutations(dictionary):
 
 
 def thresholds(N, beta, lambdaprime, ptype='log'):
-    """Returns the threshold radius and energy."""
+    """Returns the threshold radius and energy. Note `lambdaprime` is equal
+    to the critical inverse temperature beta_c."""
 
     if beta == 1:
         r = np.exp(-1.0 / N)
     else:
-        r = (2.0 - beta)**(1.0 / (N * beta - N))
+        r = (2.0 - beta / lambdaprime)**(1.0 / (N * beta / lambdaprime - N))
 
     if ptype == 'log':
         e = N * np.log(r) / lambdaprime
@@ -168,13 +169,6 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
         raise RuntimeError("ptype %s not supported." % ptype)
 
     return [r, e]
-
-
-def plotting_tool(data_path, params):
-    """Plots all data available in the `DATA_hdwell` directory."""
-
-    # TODO
-    pass
 
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
@@ -244,7 +238,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
     # Timesteps at which to sample the energy.
-    sample_e = np.logspace(0, nMC_lg, nMC_lg + 1, dtype=int)
+    sample_e = np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int, endpoint=True)
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
@@ -255,7 +249,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='ignore')
 
     # Begin the MC process.
-    for ii in range(nMC):
+    for ii in range(nMC + 1):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
@@ -298,8 +292,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # given configuration.
         config_up = n_config[dE_up]
         config_down = n_config[dE_down]
-        counter_up = Counter(int(floor(log10(x__))) for x__ in config_up)
-        counter_down = Counter(int(floor(log10(x__))) for x__ in config_down)
+        counter_up = Counter(int(floor(log2(x__))) for x__ in config_up)
+        counter_down = Counter(int(floor(log2(x__))) for x__ in config_down)
 
         # Tricky dictionary manipulation with the Counter class, keys are the
         # order of magnitude, values are added between dictionaries (or
@@ -329,7 +323,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         exited_basin = np.where((e0 < e_threshold) & (ef >= e_threshold))[1]
 
         exited_basin_cc = n_basin[exited_basin]
-        basin_log = Counter(int(floor(log10(x__))) for x__ in exited_basin_cc)
+        basin_log = Counter(int(floor(log2(x__))) for x__ in exited_basin_cc)
         psi_basin += basin_log
 
         # And reset.
@@ -345,10 +339,15 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         if ii in sample_e:
             avg_e.append(np.mean(e0))
 
+    total_time = ((time() - t0) / 3600.0)
+
     # Reset the overflow warnings.
     np.seterr(over='warn')
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(sample_e,
+                open(os.path.join(data_directory, "sample_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(psi_config, open(os.path.join(data_directory,
                                               "psi_config.pkl"), 'wb'),
@@ -360,3 +359,5 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         pickle.dump([all_e],
                     open(os.path.join(data_directory, "all_e.pkl"), 'wb'),
                     protocol=pickle.HIGHEST_PROTOCOL)
+
+    print("Done. %.05f h" % total_time)
