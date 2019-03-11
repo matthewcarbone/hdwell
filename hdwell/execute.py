@@ -18,7 +18,7 @@ from . import logger  # noqa
 lg = logging.getLogger(__name__)
 
 
-TIME_ESTIMATOR_CONV = 2.5e-9  # hrs per particle per mc timestep
+TIME_ESTIMATOR_CONV = 2.5e-11  # hrs per particle per mc timestep per dimension
 PROTOCOL_DICT = {
     1: "sample on the unit ball in a purely random fashion"
 }
@@ -72,6 +72,9 @@ def execute_protocol_1(params, target_run_directory, df, cluster=True,
         exitcode = process.returncode
         exitcodes.append(exitcode)
 
+        print(out)
+        break
+
         if exitcode != 0:
             clean = False
 
@@ -95,6 +98,7 @@ def run_all(params, target_directory, prompt=True):
     Np = len(p)
     max_nmc = np.max(params['execution_parameters']['nmc'])
     max_nvec = np.max(params['execution_parameters']['nvec'])
+    max_n = np.max(params['execution_parameters']['dims'])
     dt = current_datetime() + "-p%i" % protocol
     target_data_directory = os.path.join(target_directory, 'DATA_hdwell')
     target_run_directory = os.path.join(target_data_directory, dt)
@@ -111,7 +115,7 @@ def run_all(params, target_directory, prompt=True):
         print("      and %i 'particles' (parallel executions)"
               % max_nvec)
         print("    * Estimated time to completion %.02f hours"
-              % (TIME_ESTIMATOR_CONV * 10**max_nmc * max_nvec))
+              % (TIME_ESTIMATOR_CONV * 10**max_nmc * max_nvec * max_n))
         print("    * Number of reports/job: %i" % params['n_report'])
         proceed = input("\nProceed? (y for yes)\n")
 
