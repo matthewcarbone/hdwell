@@ -10,7 +10,7 @@ __status__ = "Prototype"
 import numpy as np
 import os
 import sys
-from math import floor, log10
+from math import floor, log2, log10
 import logging
 import datetime
 import pickle
@@ -24,6 +24,7 @@ lg = logging.getLogger(__name__)
 
 
 AVAILABLE_P_TYPES = ['quad', 'log']
+ENERGY_SAMPLE = 1000
 
 
 # Directory & Data Tools ------------------------------------------------------
@@ -237,9 +238,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
     # Timesteps at which to sample the energy.
-    sample_e = np.logspace(0, nMC_lg, 10, dtype=int, endpoint=True)
-    print(sample_e)
-    exit(0)
+    sample_e = np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int, endpoint=True)
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
@@ -250,7 +249,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='ignore')
 
     # Begin the MC process.
-    for ii in range(nMC + 1):
+    for ii in range(10):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
@@ -293,8 +292,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # given configuration.
         config_up = n_config[dE_up]
         config_down = n_config[dE_down]
-        counter_up = Counter(int(floor(log10(x__))) for x__ in config_up)
-        counter_down = Counter(int(floor(log10(x__))) for x__ in config_down)
+        counter_up = Counter(int(floor(log2(x__))) for x__ in config_up)
+        counter_down = Counter(int(floor(log2(x__))) for x__ in config_down)
 
         # Tricky dictionary manipulation with the Counter class, keys are the
         # order of magnitude, values are added between dictionaries (or
@@ -324,7 +323,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         exited_basin = np.where((e0 < e_threshold) & (ef >= e_threshold))[1]
 
         exited_basin_cc = n_basin[exited_basin]
-        basin_log = Counter(int(floor(log10(x__))) for x__ in exited_basin_cc)
+        basin_log = Counter(int(floor(log2(x__))) for x__ in exited_basin_cc)
         psi_basin += basin_log
 
         # And reset.
@@ -339,6 +338,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # Get the average energy if the timestep warrents it.
         if ii in sample_e:
             avg_e.append(np.mean(e0))
+
+    total_time = ((time() - t0) / 3600.0)
 
     # Reset the overflow warnings.
     np.seterr(over='warn')
@@ -358,3 +359,5 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         pickle.dump([all_e],
                     open(os.path.join(data_directory, "all_e.pkl"), 'wb'),
                     protocol=pickle.HIGHEST_PROTOCOL)
+
+    print("Done. %.05f h" % total_time)
