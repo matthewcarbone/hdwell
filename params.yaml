@@ -90,3 +90,14 @@ danger:
   save_all_energies:  False
   run_on_local:       False
   pipe_all_to_LOG:    False  # Not yet implemented
+
+
+# Plotting --------------------------------------------------------------------
+#     Controls the protocol for automatic plotting using the plotting_tool()
+#     function in aux.py. See templates.py for a detailed description of what
+#     each protocol corresponds to.
+
+plot:
+  protocol:        1
+  dpi:             300
+  plots_per_page:  5

@@ -18,7 +18,6 @@ from time import time
 from itertools import product
 from collections import Counter
 import secrets
-# import matplotlib.pyplot as plt
 
 from . import logger  # noqa
 lg = logging.getLogger(__name__)
@@ -123,7 +122,7 @@ def execution_parameters_permutations(dictionary):
         hp2: [3, 4]
     }
 
-    and returns all permutations:
+    and returns a list of all permutations:
 
     eg1 = {
         hp1: 1
@@ -155,12 +154,13 @@ def execution_parameters_permutations(dictionary):
 
 
 def thresholds(N, beta, lambdaprime, ptype='log'):
-    """Returns the threshold radius and energy."""
+    """Returns the threshold radius and energy. Note `lambdaprime` is equal
+    to the critical inverse temperature beta_c."""
 
     if beta == 1:
         r = np.exp(-1.0 / N)
     else:
-        r = (2.0 - beta)**(1.0 / (N * beta - N))
+        r = (2.0 - beta / lambdaprime)**(1.0 / (N * beta / lambdaprime - N))
 
     if ptype == 'log':
         e = N * np.log(r) / lambdaprime
@@ -168,13 +168,6 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
         raise RuntimeError("ptype %s not supported." % ptype)
 
     return [r, e]
-
-
-def plotting_tool(data_path, params):
-    """Plots all data available in the `DATA_hdwell` directory."""
-
-    # TODO
-    pass
 
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
