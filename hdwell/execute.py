@@ -72,6 +72,9 @@ def execute_protocol_1(params, target_run_directory, df, cluster=True,
         exitcode = process.returncode
         exitcodes.append(exitcode)
 
+        print(out)
+        break
+
         if exitcode != 0:
             clean = False
 

@@ -249,7 +249,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='ignore')
 
     # Begin the MC process.
-    for ii in range(10):
+    for ii in range(nMC + 1):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
