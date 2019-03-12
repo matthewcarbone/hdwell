@@ -238,7 +238,9 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
     # Timesteps at which to sample the energy.
-    sample_e = np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int, endpoint=True)
+    sample_e = \
+        np.unique(np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int,
+                              endpoint=True))
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
