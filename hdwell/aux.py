@@ -249,6 +249,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.seterr(over='ignore')
 
     # Begin the MC process.
+    counter = 0
     for ii in range(nMC + 1):
 
         # Report at designated timesteps.
@@ -338,8 +339,12 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # Get the average energy if the timestep warrents it.
         if ii in sample_e:
             avg_e.append(np.mean(e0))
+            counter += 1
 
     total_time = ((time() - t0) / 3600.0)
+
+    np.testing.assert_equal(counter, len(avg_e))
+    np.testing.assert_equal(counter, ENERGY_SAMPLE)
 
     # Reset the overflow warnings.
     np.seterr(over='warn')

@@ -50,15 +50,12 @@ def plot_actual(run_path, plotting_params, df):
                          str(np.max(df.nvec.unique()))))
 
     groups = df[p['group_by']].unique()
-    zfill_index = order_of_magnitude(np.max(df['loc'].unique())) + 1
+    zfill_index = order_of_magnitude(1 + np.max(df['loc'].unique())) + 1
 
     # Clear past figures and initialize a new one.
     # Average energy ----------------------------------------------------------
     plt.clf()
     plt.figure(figsize=(8.5, 11))
-
-    nMC_lg = df['nmc'].unique()[0]
-    sample_e = np.logspace(0, nMC_lg, nMC_lg, dtype=int)
 
     lg.info("Average Energy...")
     for ii, g in enumerate(groups):
@@ -74,15 +71,17 @@ def plot_actual(run_path, plotting_params, df):
             # Load in the average energies.
             loc_str = str(row['loc']).zfill(zfill_index)
             energy_path = os.path.join(run_path, loc_str, 'avg_e.pkl')
+            sample_e_path = os.path.join(run_path, loc_str, 'sample_e.pkl')
             avg_e = pickle.load(open(energy_path, 'rb'))
+            sample_e = pickle.load(open(sample_e_path, 'rb'))
             if ii == 0:
                 label = "%s" % row['beta']
             else:
                 label = None
             if p['avg_e_scale'] == 'log':
-                plt.semilogx(sample_e, avg_e, 'o', label=label)
+                plt.semilogx(sample_e, avg_e, 'o', markersize=1, label=label)
             else:
-                plt.plot(sample_e, avg_e, 'o', label=label)
+                plt.plot(sample_e, avg_e, 'o', markersize=1, label=label)
             plt.ylabel(r"$\langle E \rangle$")
 
             if index == len(df_temp.index) - 1:
@@ -101,6 +100,8 @@ def plot_actual(run_path, plotting_params, df):
             for index, row in df_temp.iterrows():
                 loc_str = str(row['loc']).zfill(zfill_index)
                 energy_path = os.path.join(run_path, loc_str, 'avg_e.pkl')
+                sample_e_path = os.path.join(run_path, loc_str, 'sample_e.pkl')
+                sample_e = pickle.load(open(sample_e_path, 'rb'))
                 avg_e = pickle.load(open(energy_path, 'rb'))
                 m = np.polyfit(sample_e_log[-last_n:], avg_e[-last_n:], deg=1)
                 best_fit = np.polyval(m, sample_e_log)
@@ -111,6 +112,11 @@ def plot_actual(run_path, plotting_params, df):
 
         # Only need one legend.
         plt.legend(title="%s" % p['to_plot'], fontsize=6)
+
+        if ii != len(groups) - 1:
+            plt.tick_params(labelbottom=False)
+
+    plt.subplots_adjust(hspace=0.05)
 
     plt.savefig(os.path.join(run_path, 'avg_e.pdf'), dpi=dpi,
                 bbox_inches='tight')
