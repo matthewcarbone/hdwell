@@ -346,7 +346,6 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     total_time = ((time() - t0) / 3600.0)
 
     np.testing.assert_equal(counter, len(avg_e))
-    np.testing.assert_equal(counter, ENERGY_SAMPLE)
 
     # Reset the overflow warnings.
     np.seterr(over='warn')
