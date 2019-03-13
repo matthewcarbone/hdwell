@@ -39,9 +39,6 @@ generating matplotlib plots. Note that some features, such as dpi, are defined
 independently in the parameter file. The keys indicate the following:
     avg_e_scale : str
         Choices are 'log' or 'lin' for logarithmic or linear x-axis scale.
-    avg_e_best_fit : bool
-        Whether or not to add a best fit line to log-scaled average energy
-        plot, only works if avg_e_scale = 'log', otherwised ignored.
     last_n_points : int
         The number of points, starting from the end of the run, with which to
         use for the best fit line. Of course, like the above, ignored if
@@ -63,8 +60,7 @@ independently in the parameter file. The keys indicate the following:
 PLOTTING_PROTOCOL_MAP = {
     1: {
         'avg_e_scale': 'log',
-        'avg_e_best_fit': True,
-        'last_n_points': 3,
+        'last_n_points': 500,
         'to_plot': 'beta',
         'group_by': 'N',
         'plot_maxes': True

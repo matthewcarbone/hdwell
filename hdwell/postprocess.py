@@ -79,18 +79,18 @@ def plot_actual(run_path, plotting_params, df):
             else:
                 label = None
             if p['avg_e_scale'] == 'log':
-                plt.semilogx(sample_e, avg_e, 'o', markersize=1, label=label)
+                plt.semilogx(sample_e, avg_e, 'o', markersize=0.5, label=label)
             else:
-                plt.plot(sample_e, avg_e, 'o', markersize=1, label=label)
-            plt.ylabel(r"$\langle E \rangle$")
+                plt.plot(sample_e, avg_e, 'o', markersize=0.5, label=label)
+            plt.ylabel(r"$\langle E \rangle(t)$")
 
             if index == len(df_temp.index) - 1:
                 plt.xlabel(r"$t$")
 
-        plt.text(0.5, 0.1, "%s = %i" % (p['group_by'], g),
+        plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
                  ha='center', va='top', transform=ax.transAxes, fontsize=14)
 
-        if p['avg_e_best_fit'] and p['avg_e_scale'] == 'log':
+        if p['avg_e_scale'] == 'log':
             # This is not efficient. TODO: refactor.
 
             sample_e_log = np.log10(sample_e)
@@ -119,6 +119,183 @@ def plot_actual(run_path, plotting_params, df):
     plt.subplots_adjust(hspace=0.05)
 
     plt.savefig(os.path.join(run_path, 'avg_e.pdf'), dpi=dpi,
+                bbox_inches='tight')
+
+    # Psi config --------------------------------------------------------------
+    plt.clf()
+    plt.figure(figsize=(8.5, 11))
+
+    lg.info("Psi Config...")
+    for ii, g in enumerate(groups):
+        lg.info("%i // %i" % (ii, g))
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        ax = plt.subplot(len(groups), 1, ii + 1)
+        ax.tick_params(axis='both', which='minor')
+
+        # For each group, plot 'to_plot'.
+        df_temp = df.query('%s == "%s"' % (p['group_by'], g))
+
+        for index, row in df_temp.iterrows():
+            # Load in the average energies.
+            loc_str = str(row['loc']).zfill(zfill_index)
+            psi_config_path = os.path.join(run_path, loc_str, 'psi_config.pkl')
+            psi_config = pickle.load(open(psi_config_path, 'rb'))
+
+            xgrid = []
+            ygrid = []
+            for key, value in psi_config.items():
+                xgrid.append(2**key)
+                ygrid.append(value)
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+
+            if index == len(df_temp.index) - 1:
+                plt.xlabel(r"$t_{bin}$ (log base 2)")
+
+            if ii == 0:
+                label = "%s" % row['beta']
+            else:
+                label = None
+
+            if xgrid == []:
+                continue
+
+            plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
+
+            plt.ylabel(r"$\psi_C(t)$")
+            ax.tick_params(axis='both', which='minor')
+
+        plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
+                 ha='center', va='top', transform=ax.transAxes, fontsize=14)
+
+        last_n = p['last_n_points']
+
+        """
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        for index, row in df_temp.iterrows():
+
+            loc_str = str(row['loc']).zfill(zfill_index)
+            psi_config_path = os.path.join(run_path, loc_str, 'psi_config.pkl')
+            psi_config = pickle.load(open(psi_config_path, 'rb'))
+
+            xgrid = []
+            ygrid = []
+            for key, value in psi_config.items():
+                xgrid.append(key)
+                ygrid.append(value)
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+
+            m = np.polyfit(xgrid[-last_n:], ygrid[-last_n:], deg=1)
+            best_fit = np.polyval(m, xgrid)
+            plt.plot(xgrid, best_fit, '--', alpha=0.5,
+                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
+
+        plt.ylim(bottom=0.0)
+        """
+
+        # Only need one legend.
+        plt.legend(title="%s" % p['to_plot'], fontsize=6)
+
+        if ii != len(groups) - 1:
+            plt.tick_params(labelbottom=False)
+
+    plt.subplots_adjust(hspace=0.05)
+
+    plt.savefig(os.path.join(run_path, 'psi_config.pdf'), dpi=dpi,
+                bbox_inches='tight')
+
+    # Psi basin ---------------------------------------------------------------
+    plt.clf()
+    plt.figure(figsize=(8.5, 11))
+
+    lg.info("Psi Basin...")
+    for ii, g in enumerate(groups):
+        lg.info("%i // %i" % (ii, g))
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        ax = plt.subplot(len(groups), 1, ii + 1)
+        ax.tick_params(axis='both', which='minor')
+
+        # For each group, plot 'to_plot'.
+        df_temp = df.query('%s == "%s"' % (p['group_by'], g))
+
+        for index, row in df_temp.iterrows():
+            # Load in the average energies.
+            loc_str = str(row['loc']).zfill(zfill_index)
+            psi_basin_path = os.path.join(run_path, loc_str, 'psi_basin.pkl')
+            psi_basin = pickle.load(open(psi_basin_path, 'rb'))
+
+            xgrid = []
+            ygrid = []
+            for key, value in psi_basin.items():
+                xgrid.append(2**key)
+                ygrid.append(value)
+
+            if index == len(df_temp.index) - 1:
+                plt.xlabel(r"$t_{bin}$ (log base 2)")
+
+            if ii == 0:
+                label = "%s" % row['beta']
+            else:
+                label = None
+
+            if xgrid == []:
+                continue
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+
+            plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
+            ax.tick_params(axis='both', which='minor')
+
+            plt.ylabel(r"$\psi_B(t)$")
+
+        plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
+                 ha='center', va='top', transform=ax.transAxes, fontsize=14)
+
+        last_n = p['last_n_points']
+
+        """
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        for index, row in df_temp.iterrows():
+
+            loc_str = str(row['loc']).zfill(zfill_index)
+            psi_basin_path = os.path.join(run_path, loc_str, 'psi_basin.pkl')
+            psi_basin = pickle.load(open(psi_basin_path, 'rb'))
+
+            xgrid = []
+            ygrid = []
+            for key, value in psi_basin.items():
+                xgrid.append(key)
+                ygrid.append(value)
+
+            if xgrid == []:
+                continue
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+
+            m = np.polyfit(xgrid[-last_n:], ygrid[-last_n:], deg=1)
+            best_fit = np.polyval(m, xgrid)
+            plt.plot(xgrid, best_fit, '--', alpha=0.5,
+                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
+
+        plt.ylim(bottom=0.0)
+        """
+
+        # Only need one legend.
+        plt.legend(title="%s" % p['to_plot'], fontsize=6)
+
+        if ii != len(groups) - 1:
+            plt.tick_params(labelbottom=False)
+
+    plt.subplots_adjust(hspace=0.05)
+
+    plt.savefig(os.path.join(run_path, 'psi_basin.pdf'), dpi=dpi,
                 bbox_inches='tight')
 
 
