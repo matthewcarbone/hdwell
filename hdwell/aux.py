@@ -25,7 +25,7 @@ lg = logging.getLogger(__name__)
 
 AVAILABLE_P_TYPES = ['quad', 'log']
 ENERGY_SAMPLE = 1000
-MEM_SAMPLE = 1000
+MEM_SAMPLE = 50
 DELTA_OMEGA = 0.5
 
 
@@ -275,6 +275,18 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     config_recorder1 = np.zeros((N_pi_grid, n_vec))
     config_recorder2 = np.zeros((N_pi_grid, n_vec))
 
+    # To detemrine which basin the "particle" is in at any given time, we need
+    # to keep a counter. It will work as follows: each particle in the ensemble
+    # will be assigned a "basin index." The basin index will take on a real
+    # value corresponding to the basin number it is in. In other words, in the
+    # first basin, this particle will have basin index = 1. Once it exits the
+    # first basin, it acquires imaginary component i. In this way, we can keep
+    # track of whether or not the particle is in a basin, but which basin.
+    # Furthermore, once that particle enters the next basin, it looses the
+    # imaginary component, and gets +1 to its real component. Note that at
+    # first we assume every particle is outside a basin.
+    basin_index = np.ones((n_vec)) * 1j
+
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
         all_e = np.empty((nMC, n_vec))
@@ -372,19 +384,23 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # And reset.
         n_basin[exited_basin] = 0
 
+        # Account for *which* basin the particles are in. Any particle that
+        # just entered a basin gets +1:
+        basin_index[entered_basin] += (1 - 1j)
+
+        # Any particle which remains in a basin does not change. However, the
+        # basins where a particle just left acquires an imaginary component:
+        basin_index[exited_basin] += 1j
+
         # If we hit a point to record, update the configuration, add that
         # configuration to the recorder.
         if ii in pi_grid_sample_1:
             config_recorder1[counter1, :] = rf
-            basin_recorder1[counter1, entered_basin] = 1
-            basin_recorder1[counter1, still_in_basin] = 1
-            basin_recorder1[counter1, exited_basin] = 0
+            basin_recorder1[counter1, :] = basin_index
             counter1 += 1
         if ii in pi_grid_sample_2:
             config_recorder2[counter2, :] = rf
-            basin_recorder2[counter2, entered_basin] = 1
-            basin_recorder2[counter2, still_in_basin] = 1
-            basin_recorder2[counter2, exited_basin] = 0
+            basin_recorder2[counter2, :] = basin_index
             counter2 += 1
 
         # Now the xf's become the x0's for the next iteration.
@@ -409,19 +425,17 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.testing.assert_equal(counter1, N_pi_grid)
     np.testing.assert_equal(counter2, N_pi_grid)
 
-    n_basin_output = \
-        np.sum(((basin_recorder1 == basin_recorder2) & (basin_recorder1 == 1)),
-               axis=1)
+    n_basin_output = np.sum((basin_recorder1 == basin_recorder2), axis=1)
 
-    n_config_output = np.sum(config_recorder1 - config_recorder2 == 0, axis=1)
+    n_config_output = np.sum((config_recorder1 == config_recorder2), axis=1)
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(sample_e,
                 open(os.path.join(data_directory, "sample_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
-    pickle.dump(psi_config, open(os.path.join(data_directory,
-                                              "psi_config.pkl"), 'wb'),
+    pickle.dump(psi_config,
+                open(os.path.join(data_directory, "psi_config.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(psi_basin,
                 open(os.path.join(data_directory, "psi_basin.pkl"), 'wb'),

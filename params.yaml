@@ -42,7 +42,7 @@ directory_override: 'wd'
 
 execution_parameters:
   beta:  [0.1, 0.5, 0.9, 1.0, 1.1, 1.5, 2.0, 5.0]
-  dims:  [100]
+  dims:  [30]
   nmc:   [5]
   nvec:  [1000]
 

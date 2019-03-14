@@ -164,4 +164,4 @@ if __name__ == '__main__':
     elif args.protocol == 'plot':
         data_path = os.path.join(target_directory, 'DATA_hdwell')
         lg.info("Plotting all data in %s" % data_path)
-        plotting_tool(data_path, params['plot'], prompt=args.prompt)
+        plotting_tool(data_path, params, prompt=args.prompt)

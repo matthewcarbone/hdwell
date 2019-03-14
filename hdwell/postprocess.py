@@ -30,7 +30,8 @@ mpl.rcParams['axes.prop_cycle'] = cycler('color', ['b', 'c', '#ffdb00',
 AVAILABLE_PLOTTING_PARAMETERS = [1]
 
 
-def plot_actual(run_path, plotting_params, df):
+def plot_actual(run_path, params, df):
+    plotting_params = params['plot']
 
     if plotting_params['protocol'] not in AVAILABLE_PLOTTING_PARAMETERS:
         raise RuntimeError("Unsupported plotting protocol %i"
@@ -150,9 +151,10 @@ def plot_actual(run_path, plotting_params, df):
 
             xgrid = np.array(xgrid)
             ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
 
             if index == len(df_temp.index) - 1:
-                plt.xlabel(r"$t_{bin}$ (log base 2)")
+                plt.xlabel(r"$\tau$")
 
             if ii == 0:
                 label = "%s" % row['beta']
@@ -172,7 +174,7 @@ def plot_actual(run_path, plotting_params, df):
 
         last_n = p['last_n_points']
 
-        """
+        # Add best fit lines
         plt.gca().set_prop_cycle(None)  # Reset colormap
         for index, row in df_temp.iterrows():
 
@@ -183,19 +185,25 @@ def plot_actual(run_path, plotting_params, df):
             xgrid = []
             ygrid = []
             for key, value in psi_config.items():
-                xgrid.append(key)
+                xgrid.append(2**key)
                 ygrid.append(value)
 
             xgrid = np.array(xgrid)
             ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
 
-            m = np.polyfit(xgrid[-last_n:], ygrid[-last_n:], deg=1)
-            best_fit = np.polyval(m, xgrid)
-            plt.plot(xgrid, best_fit, '--', alpha=0.5,
+            logx = np.log10(xgrid)
+            logy = np.log10(ygrid)
+            m = np.polyfit(logx, logy, deg=1)
+            poly = np.poly1d(m)
+
+            def yfit(x):
+                return 10.0**(poly(np.log10(x)))
+
+            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
                      label="y = %.02f * x + %.02f" % (m[0], m[1]))
 
         plt.ylim(bottom=0.0)
-        """
 
         # Only need one legend.
         plt.legend(title="%s" % p['to_plot'], fontsize=6)
@@ -236,7 +244,7 @@ def plot_actual(run_path, plotting_params, df):
                 ygrid.append(value)
 
             if index == len(df_temp.index) - 1:
-                plt.xlabel(r"$t_{bin}$ (log base 2)")
+                plt.xlabel(r"$\tau$")
 
             if ii == 0:
                 label = "%s" % row['beta']
@@ -248,6 +256,7 @@ def plot_actual(run_path, plotting_params, df):
 
             xgrid = np.array(xgrid)
             ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
 
             plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
             ax.tick_params(axis='both', which='minor')
@@ -259,7 +268,6 @@ def plot_actual(run_path, plotting_params, df):
 
         last_n = p['last_n_points']
 
-        """
         plt.gca().set_prop_cycle(None)  # Reset colormap
         for index, row in df_temp.iterrows():
 
@@ -270,7 +278,7 @@ def plot_actual(run_path, plotting_params, df):
             xgrid = []
             ygrid = []
             for key, value in psi_basin.items():
-                xgrid.append(key)
+                xgrid.append(2**key)
                 ygrid.append(value)
 
             if xgrid == []:
@@ -278,14 +286,20 @@ def plot_actual(run_path, plotting_params, df):
 
             xgrid = np.array(xgrid)
             ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
 
-            m = np.polyfit(xgrid[-last_n:], ygrid[-last_n:], deg=1)
-            best_fit = np.polyval(m, xgrid)
-            plt.plot(xgrid, best_fit, '--', alpha=0.5,
+            logx = np.log10(xgrid)
+            logy = np.log10(ygrid)
+            m = np.polyfit(logx, logy, deg=1)
+            poly = np.poly1d(m)
+
+            def yfit(x):
+                return 10.0**(poly(np.log10(x)))
+
+            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
                      label="y = %.02f * x + %.02f" % (m[0], m[1]))
 
         plt.ylim(bottom=0.0)
-        """
 
         # Only need one legend.
         plt.legend(title="%s" % p['to_plot'], fontsize=6)
@@ -296,6 +310,188 @@ def plot_actual(run_path, plotting_params, df):
     plt.subplots_adjust(hspace=0.05)
 
     plt.savefig(os.path.join(run_path, 'psi_basin.pdf'), dpi=dpi,
+                bbox_inches='tight')
+
+    # Memory config -----------------------------------------------------------
+    plt.clf()
+    plt.figure(figsize=(8.5, 11))
+
+    lg.info("Pi Config...")
+    for ii, g in enumerate(groups):
+        lg.info("%i // %i" % (ii, g))
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        ax = plt.subplot(len(groups), 1, ii + 1)
+        ax.tick_params(axis='both', which='minor')
+
+        # For each group, plot 'to_plot'.
+        df_temp = df.query('%s == "%s"' % (p['group_by'], g))
+
+        for index, row in df_temp.iterrows():
+            # Load in the average energies.
+            loc_str = str(row['loc']).zfill(zfill_index)
+            pi_basin_path = os.path.join(run_path, loc_str,
+                                         'memory_config.pkl')
+            pi_basin = pickle.load(open(pi_basin_path, 'rb'))
+            ygrid = pi_basin[0]
+            xgrid = pi_basin[1]
+            delta = pi_basin[2]
+
+            if index == len(df_temp.index) - 1:
+                plt.xlabel(r"$\tau$")
+
+            if ii == 0:
+                label = "%s" % row['beta']
+            else:
+                label = None
+
+            if xgrid == []:
+                continue
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+            ygrid = ygrid / row['nvec']
+
+            plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
+            ax.tick_params(axis='both', which='minor')
+
+            plt.ylabel(r"$\Pi_C(t_w, t_w + %.02f t_w)$" % delta)
+
+        plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
+                 ha='center', va='top', transform=ax.transAxes, fontsize=14)
+        """
+        last_n = p['last_n_points']
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        for index, row in df_temp.iterrows():
+
+            loc_str = str(row['loc']).zfill(zfill_index)
+            pi_basin_path = os.path.join(run_path, loc_str,
+                                         'memory_basin.pkl')
+            pi_basin = pickle.load(open(pi_basin_path, 'rb'))
+
+            ygrid = pi_basin[0]
+            xgrid = pi_basin[1]
+            delta = pi_basin[2]
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
+
+            logx = np.log10(xgrid)
+            logy = np.log10(ygrid)
+            m = np.polyfit(logx, logy, deg=1)
+            poly = np.poly1d(m)
+
+            def yfit(x):
+                return 10.0**(poly(np.log10(x)))
+
+            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
+                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
+        """
+
+        plt.ylim(bottom=0.0)
+
+        # Only need one legend.
+        plt.legend(title="%s" % p['to_plot'], fontsize=6)
+
+        if ii != len(groups) - 1:
+            plt.tick_params(labelbottom=False)
+
+    plt.subplots_adjust(hspace=0.05)
+
+    plt.savefig(os.path.join(run_path, 'memory_config.pdf'), dpi=dpi,
+                bbox_inches='tight')
+
+    # Memory basin ------------------------------------------------------------
+    plt.clf()
+    plt.figure(figsize=(8.5, 11))
+
+    lg.info("Pi Basin...")
+    for ii, g in enumerate(groups):
+        lg.info("%i // %i" % (ii, g))
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        ax = plt.subplot(len(groups), 1, ii + 1)
+        ax.tick_params(axis='both', which='minor')
+
+        # For each group, plot 'to_plot'.
+        df_temp = df.query('%s == "%s"' % (p['group_by'], g))
+
+        for index, row in df_temp.iterrows():
+            # Load in the average energies.
+            loc_str = str(row['loc']).zfill(zfill_index)
+            pi_basin_path = os.path.join(run_path, loc_str,
+                                         'memory_basin.pkl')
+            pi_basin = pickle.load(open(pi_basin_path, 'rb'))
+            ygrid = pi_basin[0]
+            xgrid = pi_basin[1]
+            delta = pi_basin[2]
+
+            if index == len(df_temp.index) - 1:
+                plt.xlabel(r"$\tau$")
+
+            if ii == 0:
+                label = "%s" % row['beta']
+            else:
+                label = None
+
+            if xgrid == []:
+                continue
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+            ygrid = ygrid / row['nvec']
+
+            plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
+            ax.tick_params(axis='both', which='minor')
+
+            plt.ylabel(r"$\Pi_B(t_w, t_w + %.02f t_w)$" % delta)
+
+        plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
+                 ha='center', va='top', transform=ax.transAxes, fontsize=14)
+        """
+        last_n = p['last_n_points']
+
+        plt.gca().set_prop_cycle(None)  # Reset colormap
+        for index, row in df_temp.iterrows():
+
+            loc_str = str(row['loc']).zfill(zfill_index)
+            pi_basin_path = os.path.join(run_path, loc_str,
+                                         'memory_basin.pkl')
+            pi_basin = pickle.load(open(pi_basin_path, 'rb'))
+
+            ygrid = pi_basin[0]
+            xgrid = pi_basin[1]
+            delta = pi_basin[2]
+
+            xgrid = np.array(xgrid)
+            ygrid = np.array(ygrid)
+            ygrid = ygrid / np.max(ygrid)
+
+            logx = np.log10(xgrid)
+            logy = np.log10(ygrid)
+            m = np.polyfit(logx, logy, deg=1)
+            poly = np.poly1d(m)
+
+            def yfit(x):
+                return 10.0**(poly(np.log10(x)))
+
+            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
+                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
+        """
+
+        plt.ylim(bottom=0.0)
+
+        # Only need one legend.
+        plt.legend(title="%s" % p['to_plot'], fontsize=6)
+
+        if ii != len(groups) - 1:
+            plt.tick_params(labelbottom=False)
+
+    plt.subplots_adjust(hspace=0.05)
+
+    plt.savefig(os.path.join(run_path, 'memory_basin.pdf'), dpi=dpi,
                 bbox_inches='tight')
 
 
