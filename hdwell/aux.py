@@ -25,6 +25,8 @@ lg = logging.getLogger(__name__)
 
 AVAILABLE_P_TYPES = ['quad', 'log']
 ENERGY_SAMPLE = 1000
+MEM_SAMPLE = 10
+DELTA_OMEGA = 0.5
 
 
 # Directory & Data Tools ------------------------------------------------------
@@ -210,6 +212,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     """
 
     nMC = int(10**nMC_lg)
+    nMC = 1000
     lambd_ = lambdaprime / N
     increment = int(nMC / n_report)  # TODO: if increment is 0
     zfill_index = order_of_magnitude(nMC) + 1
@@ -227,6 +230,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     avg_e = []
     psi_basin = Counter({})
     psi_config = Counter({})
+    min_r = np.ones((n_vec))
+    avg_min_r = []
 
     # Initialize the number of timesteps in the current basin / config. Each
     # time a "particle" changes basins / configuration, this counter will
@@ -242,6 +247,35 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         np.unique(np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int,
                               endpoint=True))
 
+    # We will now define the points at which to determine Pi_config and
+    # Pi_basin. Starting with some defined DELTA_OMEGA, and the number of MC
+    # points, this defines the maximum point at which we can sample on the
+    # first grid via the second argument in Pi: tw + tw * DELTA_OMEGA.
+    tw_max = floor(nMC / (DELTA_OMEGA + 1))
+
+    # The first grid then is:
+    pi_grid_sample_1 = np.unique(np.logspace(0, log10(tw_max), MEM_SAMPLE,
+                                             dtype=int, endpoint=True))
+
+    # The second grid maps exactly to the first grid via
+    # tw += tw * DELTA_OMEGA.
+    pi_grid_sample_2 = (pi_grid_sample_1 * (DELTA_OMEGA + 1.0)).astype(int)
+    np.testing.assert_equal(True, pi_grid_sample_2[-1] <= nMC)
+
+    # The number of points in these pi_grids:
+    N_pi_grid = len(pi_grid_sample_2)
+    np.testing.assert_equal(N_pi_grid, len(pi_grid_sample_1))
+
+    # Now we need a matrix which saves the full configuration at each recorded
+    # point so later they may be compared; one for the configs, one for the
+    # basins. Note that if we wish to do this for more DELTA_OMEGA's we need
+    # many more of these matrices. This may need to be rethought if we need
+    # many more DELTA_OMEGA's!
+    basin_recorder1 = np.zeros((N_pi_grid, n_vec))
+    basin_recorder2 = np.zeros((N_pi_grid, n_vec))
+    config_recorder1 = np.zeros((N_pi_grid, n_vec))
+    config_recorder2 = np.zeros((N_pi_grid, n_vec))
+
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
         all_e = np.empty((nMC, n_vec))
@@ -252,6 +286,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
     # Begin the MC process.
     counter = 0
+    counter1 = 0
+    counter2 = 0
     for ii in range(nMC + 1):
 
         # Report at designated timesteps.
@@ -285,6 +321,11 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # Update the xf vector where necessary.
         xf[:, :, dE_stay] = x0[:, :, dE_stay]
         ef[:, dE_stay] = e0[:, dE_stay]
+
+        # Update the minimum r vector
+        rf = np.sqrt(np.sum(xf**2, axis=1)).squeeze()
+        to_update = np.where(rf < min_r)[0]
+        min_r[to_update] = rf[to_update]
 
         # Append the basin / config. First, the configurations in which a move
         # was rejected stay in the same configuration, so those entries += 1
@@ -332,23 +373,48 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # And reset.
         n_basin[exited_basin] = 0
 
+        # If we hit a point to record, update the configuration, add that
+        # configuration to the recorder.
+        if ii in pi_grid_sample_1:
+            config_recorder1[counter1, :] = rf
+            basin_recorder1[counter1, entered_basin] = 1
+            basin_recorder1[counter1, still_in_basin] = 1
+            basin_recorder1[counter1, exited_basin] = 0
+            counter1 += 1
+        if ii in pi_grid_sample_2:
+            config_recorder2[counter2, :] = rf
+            basin_recorder2[counter2, entered_basin] = 1
+            basin_recorder2[counter2, still_in_basin] = 1
+            basin_recorder2[counter2, exited_basin] = 0
+            counter2 += 1
+
         # Now the xf's become the x0's for the next iteration.
         x0[:, :, dE_down] = xf[:, :, dE_down]
         x0[:, :, dE_up] = xf[:, :, dE_up]
         e0[:, dE_down] = ef[:, dE_down]
         e0[:, dE_up] = ef[:, dE_up]
 
-        # Get the average energy if the timestep warrents it.
+        # Get the average energy if the timestep warrents it. Also update the
+        # average minimum radius.
         if ii in sample_e:
             avg_e.append(np.mean(e0))
+            avg_min_r.append(np.mean(rf))
             counter += 1
 
     total_time = ((time() - t0) / 3600.0)
 
-    np.testing.assert_equal(counter, len(avg_e))
-
     # Reset the overflow warnings.
     np.seterr(over='warn')
+
+    np.testing.assert_equal(counter, len(avg_e))
+    np.testing.assert_equal(counter1, N_pi_grid)
+    np.testing.assert_equal(counter2, N_pi_grid)
+
+    n_basin_output = \
+        np.sum(((basin_recorder1 == basin_recorder2) & (basin_recorder1 == 1)),
+               axis=1)
+
+    n_config_output = np.sum(config_recorder1 - config_recorder2 == 0, axis=1)
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
@@ -361,6 +427,13 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     pickle.dump(psi_basin,
                 open(os.path.join(data_directory, "psi_basin.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(n_basin_output,
+                open(os.path.join(data_directory, "memory_basin.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(n_config_output,
+                open(os.path.join(data_directory, "memory_config.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+
     if save_all_energies:
         pickle.dump([all_e],
                     open(os.path.join(data_directory, "all_e.pkl"), 'wb'),
