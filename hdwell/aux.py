@@ -212,7 +212,6 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     """
 
     nMC = int(10**nMC_lg)
-    nMC = 1000
     lambd_ = lambdaprime / N
     increment = int(nMC / n_report)  # TODO: if increment is 0
     zfill_index = order_of_magnitude(nMC) + 1
