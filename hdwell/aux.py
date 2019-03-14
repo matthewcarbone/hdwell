@@ -270,10 +270,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     # basins. Note that if we wish to do this for more DELTA_OMEGA's we need
     # many more of these matrices. This may need to be rethought if we need
     # many more DELTA_OMEGA's!
-    basin_recorder1 = np.zeros((N_pi_grid, n_vec))
-    basin_recorder2 = np.zeros((N_pi_grid, n_vec))
-    config_recorder1 = np.zeros((N_pi_grid, n_vec))
-    config_recorder2 = np.zeros((N_pi_grid, n_vec))
+    basin_recorder1 = np.zeros((N_pi_grid, n_vec), dtype=complex)
+    basin_recorder2 = np.zeros((N_pi_grid, n_vec), dtype=complex)
+    config_recorder1 = np.zeros((N_pi_grid, n_vec), dtype=complex)
+    config_recorder2 = np.zeros((N_pi_grid, n_vec), dtype=complex)
 
     # To detemrine which basin the "particle" is in at any given time, we need
     # to keep a counter. It will work as follows: each particle in the ensemble
@@ -285,7 +285,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     # Furthermore, once that particle enters the next basin, it looses the
     # imaginary component, and gets +1 to its real component. Note that at
     # first we assume every particle is outside a basin.
-    basin_index = np.ones((n_vec)) * 1j
+    basin_index = np.ones((n_vec), dtype=complex) * 1j
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
