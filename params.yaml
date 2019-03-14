@@ -41,10 +41,10 @@ directory_override: 'wd'
 #             in aux.py.
 
 execution_parameters:
-  beta:  [0.1, 0.5, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 5.0]
+  beta:  [0.1, 0.5, 0.9, 1.0, 1.1, 1.5, 2.0, 5.0]
   dims:  [100]
-  nmc:   [6]
-  nvec:  [500]
+  nmc:   [5]
+  nvec:  [1000]
 
 lmbdp: 1.0
 ptype: 'log'
@@ -62,7 +62,7 @@ ptype: 'log'
 #             very slow, since in the n -> inf limit all points fall on the
 #             surface.
 
-n_report:          100
+n_report:          200
 smart_sampling :   True
 
 
@@ -99,5 +99,5 @@ danger:
 
 plot:
   protocol:        1
-  dpi:             300
+  dpi:             400
   plots_per_page:  5
