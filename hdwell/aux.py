@@ -25,7 +25,7 @@ lg = logging.getLogger(__name__)
 
 AVAILABLE_P_TYPES = ['quad', 'log']
 ENERGY_SAMPLE = 1000
-MEM_SAMPLE = 10
+MEM_SAMPLE = 1000
 DELTA_OMEGA = 0.5
 
 
@@ -427,10 +427,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     pickle.dump(psi_basin,
                 open(os.path.join(data_directory, "psi_basin.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
-    pickle.dump(n_basin_output,
+    pickle.dump([n_basin_output, pi_grid_sample_1, DELTA_OMEGA],
                 open(os.path.join(data_directory, "memory_basin.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
-    pickle.dump(n_config_output,
+    pickle.dump([n_config_output, pi_grid_sample_1, DELTA_OMEGA],
                 open(os.path.join(data_directory, "memory_config.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
 
