@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=New
+#SBATCH --partition=All
 #SBATCH --job-name=hdwell
 #SBATCH --output=job_data/hdwell.%A.out
 #SBATCH --error=job_data/hdwell.%A.err
