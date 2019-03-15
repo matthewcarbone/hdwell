@@ -18,6 +18,7 @@ from time import time
 from itertools import product
 from collections import Counter
 import secrets
+from scipy.integrate import quad
 
 from . import logger  # noqa
 lg = logging.getLogger(__name__)
@@ -58,6 +59,15 @@ def get_random_hash(n=16):
     return secrets.token_hex(n)
 
 # -----------------------------------------------------------------------------
+
+
+def hxw(x, w):
+    """Equation 3 in the Cammarota 2018 paper."""
+
+    def integrand(u):
+        return 1.0 / (1.0 + u) / u**x
+
+    return quad(integrand, w, np.inf)[0] * np.sin(np.pi * x) / np.pi
 
 
 def order_of_magnitude(x):
@@ -174,7 +184,8 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
 
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
-                     data_directory, save_all_energies, verbose=True):
+                     data_directory, save_all_energies, save_all_stats,
+                     verbose=True):
     """Executes a purely random sampling algorithm over the unit N-ball.
     Note that this function is meant to be called from within a compute node.
     It is assumed that all output will be piped to a SLURM (or related) output
@@ -209,6 +220,14 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     save_all_energies : bool
         If true, will save the 10^nMC-dimensional vector containing the average
         energies at every timestep.
+    save_all_stats : bool
+        Whether or not to save all statistical information so that averages may
+        be computed later (via concatenating many runs with the same
+        parameters; this allows for further parallelization). This will save
+        the following statistical information to disk:
+            * Energy for every clone, at each point at which we sample it
+            * Same for the average minimum radius
+
     """
 
     nMC = int(10**nMC_lg)
@@ -245,6 +264,11 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     sample_e = \
         np.unique(np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int,
                               endpoint=True))
+
+    # Initialize the appropriate objects for saving everything.
+    if save_all_stats:
+        save_all_stats_energy = np.empty((len(sample_e), n_vec))
+        save_all_stats_min_avg_r = np.empty((len(sample_e), n_vec))
 
     # We will now define the points at which to determine Pi_config and
     # Pi_basin. Starting with some defined DELTA_OMEGA, and the number of MC
@@ -299,6 +323,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     counter = 0
     counter1 = 0
     counter2 = 0
+    counter_save_all_stats_E = 0
+    counter_save_all_stats_R = 0
     for ii in range(nMC + 1):
 
         # Report at designated timesteps.
@@ -385,7 +411,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         n_basin[exited_basin] = 0
 
         # Account for *which* basin the particles are in. Any particle that
-        # just entered a basin gets +1:
+        # just entered a basin gets 1-i:
         basin_index[entered_basin] += (1 - 1j)
 
         # Any particle which remains in a basin does not change. However, the
@@ -415,6 +441,12 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
             avg_e.append(np.mean(e0))
             avg_min_r.append(np.mean(rf))
             counter += 1
+            if save_all_stats:
+                save_all_stats_energy[counter_save_all_stats_E, :] = e0
+                save_all_stats_min_avg_r[counter_save_all_stats_R, :] = \
+                    avg_min_r
+                counter_save_all_stats_E += 1
+                counter_save_all_stats_R += 1
 
     total_time = ((time() - t0) / 3600.0)
 
@@ -425,9 +457,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.testing.assert_equal(counter1, N_pi_grid)
     np.testing.assert_equal(counter2, N_pi_grid)
 
-    n_basin_output = np.sum((basin_recorder1 == basin_recorder2), axis=1)
-
-    n_config_output = np.sum((config_recorder1 == config_recorder2), axis=1)
+    basin_recorder = basin_recorder1 == basin_recorder2
+    n_basin_output = np.sum(basin_recorder, axis=1)
+    config_recorder = config_recorder1 == config_recorder2
+    n_config_output = np.sum(config_recorder, axis=1)
 
     pickle.dump(avg_e, open(os.path.join(data_directory, "avg_e.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
@@ -446,10 +479,30 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     pickle.dump([n_config_output, pi_grid_sample_1, DELTA_OMEGA],
                 open(os.path.join(data_directory, "memory_config.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(avg_min_r,
+                open(os.path.join(data_directory, "avg_min_r.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
 
     if save_all_energies:
-        pickle.dump([all_e],
+        pickle.dump(all_e,
                     open(os.path.join(data_directory, "all_e.pkl"), 'wb'),
+                    protocol=pickle.HIGHEST_PROTOCOL)
+
+    if save_all_stats:
+        pickle.dump(save_all_stats_energy,
+                    open(os.path.join(data_directory, "sas_all_e.pkl"), 'wb'),
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(save_all_stats_min_avg_r,
+                    open(os.path.join(data_directory,
+                                      "sas_min_avg_r_e.pkl"), 'wb'),
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(config_recorder,
+                    open(os.path.join(data_directory,
+                                      "sas_psi_config.pkl"), 'wb'),
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(basin_recorder,
+                    open(os.path.join(data_directory,
+                                      "sas_psi_basin.pkl"), 'wb'),
                     protocol=pickle.HIGHEST_PROTOCOL)
 
     print("Done. %.05f h" % total_time)

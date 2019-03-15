@@ -56,13 +56,15 @@ def execute_protocol_1(params, target_run_directory, df, cluster=True,
         ptype = row['ptype']
         n_report = params['n_report']
         d_save_energies = int(params['danger']['save_all_energies'])
+        int_save_all_stats = int(params['save_stat'])
 
         target_run_specific = os.path.join(target_run_directory, row['loc'])
 
         execution_string = \
-            "%s actual1.sbatch 1 %f %i %i %i %f %s %s %i %i" \
+            "%s actual1.sbatch 1 %f %i %i %i %f %s %s %i %i %i" \
             % (executable, beta, dim, nmc, nvec, lmbdp, ptype,
-               target_run_specific, n_report, d_save_energies)
+               target_run_specific, n_report, d_save_energies,
+               int_save_all_stats)
 
         process = subprocess.Popen(execution_string, shell=True,
                                    stdout=subprocess.PIPE,
@@ -100,6 +102,21 @@ def run_all(params, target_directory, prompt=True):
     target_data_directory = os.path.join(target_directory, 'DATA_hdwell')
     target_run_directory = os.path.join(target_data_directory, dt)
 
+    unique_nvec, ind = np.unique(params['execution_parameters']['nvec'],
+                                 return_index=True)
+    unique_nvec = unique_nvec[np.argsort(ind)]
+
+    if len(unique_nvec) == 0:
+        nvec_loops_len = 0
+        nvec_loops = None
+    else:
+        nvec_loops_len = len(unique_nvec)
+        nvec_loops = \
+            [len(np.where(params['execution_parameters']['nvec'] == ii)[0])
+             for ii in unique_nvec]
+
+    more_than_one_per_nvec = np.any(np.array(nvec_loops) > 1)
+
     if prompt:
         print("\nProtocol %i (%s) ready to run"
               % (protocol, PROTOCOL_DICT[protocol]))
@@ -107,13 +124,22 @@ def run_all(params, target_directory, prompt=True):
         print("      %s" % target_data_directory)
         print("    * Total of %i independent jobs will be submitted run"
               % Np)
-        print("    * Longest job runtime contains 10^%i monte carlo timesteps"
+        print("    * Longest job runtime contains 10^%i monte carlo timesteps,"
               % max_nmc)
-        print("      and %i 'particles' (parallel executions)"
-              % max_nvec)
+        print("      %i 'particles, and %i clones' (parallel executions)"
+              % (max_nvec, max_nvec))
+        if nvec_loops_len != 0:
+            print("    * %a execution(s) for: %a."
+                  % (nvec_loops, np.ndarray.tolist(unique_nvec)))
         print("    * Estimated time to completion %.02f hours"
               % (TIME_ESTIMATOR_CONV * 10**max_nmc * max_nvec * max_n))
         print("    * Number of reports/job: %i" % params['n_report'])
+        if more_than_one_per_nvec and prompt and not params['save_stat']:
+            print("    * Note that nvec has repeats but you are not saving "
+                  "all statistics")
+        if not more_than_one_per_nvec and prompt and params['save_stat']:
+            print("    * Note that nvec does not have repeats but you are "
+                  "saving all statistics")
         proceed = input("\nProceed? (y for yes)\n")
 
         if proceed != 'y':
@@ -149,5 +175,5 @@ def run_all(params, target_directory, prompt=True):
 
     lg.info("Proceeding to execute protocol %i" % protocol)
     if protocol == 1:
-        execute_protocol_1(params, target_run_directory, df,
-                           cluster=cluster, prompt=prompt)
+        execute_protocol_1(params, target_run_directory, df, cluster=cluster,
+                           prompt=prompt)

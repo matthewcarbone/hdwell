@@ -148,6 +148,7 @@ if __name__ == '__main__':
     set_logging_level(args)
 
     params = yaml.safe_load(open(os.path.join(WORKDIR, "params.yaml")))
+    params['execution_parameters']['nvec'] *= params['nvec_multiplier']
     target_directory = get_target_dir(params['directory_override'])
 
     # Main protocol.

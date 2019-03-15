@@ -15,7 +15,7 @@ import matplotlib as mpl
 import logging
 from cycler import cycler
 
-from .aux import order_of_magnitude
+from .aux import order_of_magnitude, hxw
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
 
 from . import logger  # noqa
@@ -183,14 +183,14 @@ def plot_actual(run_path, params, df):
             psi_config = pickle.load(open(psi_config_path, 'rb'))
 
             xgrid = []
-            ygrid = []
+            ygrid_ = []
             for key, value in psi_config.items():
                 xgrid.append(2**key)
-                ygrid.append(value)
+                ygrid_.append(value)
 
-            xgrid = np.array(xgrid)
-            ygrid = np.array(ygrid)
-            ygrid = ygrid / np.max(ygrid)
+            xgrid = np.array(xgrid[:-2])
+            ygrid = np.array(ygrid_[:-2])
+            ygrid = ygrid / np.max(ygrid_)
 
             logx = np.log10(xgrid)
             logy = np.log10(ygrid)
@@ -275,18 +275,24 @@ def plot_actual(run_path, params, df):
             psi_basin_path = os.path.join(run_path, loc_str, 'psi_basin.pkl')
             psi_basin = pickle.load(open(psi_basin_path, 'rb'))
 
-            xgrid = []
-            ygrid = []
+            xgrid_ = []
+            ygrid_ = []
             for key, value in psi_basin.items():
-                xgrid.append(2**key)
-                ygrid.append(value)
+                xgrid_.append(2**key)
+                ygrid_.append(value)
 
-            if xgrid == []:
+            if xgrid_ == []:
                 continue
 
-            xgrid = np.array(xgrid)
-            ygrid = np.array(ygrid)
-            ygrid = ygrid / np.max(ygrid)
+            xgrid = np.array(xgrid_[4:-2])
+            ygrid = np.array(ygrid_[4:-2])
+
+            try:
+                ygrid = ygrid / np.max(ygrid_)
+            except ValueError:
+                xgrid = np.array(xgrid_[:-1])
+                ygrid = np.array(ygrid_[:-1])
+                ygrid = ygrid / np.max(ygrid_)
 
             logx = np.log10(xgrid)
             logy = np.log10(ygrid)
@@ -359,36 +365,6 @@ def plot_actual(run_path, params, df):
 
         plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
                  ha='center', va='top', transform=ax.transAxes, fontsize=14)
-        """
-        last_n = p['last_n_points']
-
-        plt.gca().set_prop_cycle(None)  # Reset colormap
-        for index, row in df_temp.iterrows():
-
-            loc_str = str(row['loc']).zfill(zfill_index)
-            pi_basin_path = os.path.join(run_path, loc_str,
-                                         'memory_basin.pkl')
-            pi_basin = pickle.load(open(pi_basin_path, 'rb'))
-
-            ygrid = pi_basin[0]
-            xgrid = pi_basin[1]
-            delta = pi_basin[2]
-
-            xgrid = np.array(xgrid)
-            ygrid = np.array(ygrid)
-            ygrid = ygrid / np.max(ygrid)
-
-            logx = np.log10(xgrid)
-            logy = np.log10(ygrid)
-            m = np.polyfit(logx, logy, deg=1)
-            poly = np.poly1d(m)
-
-            def yfit(x):
-                return 10.0**(poly(np.log10(x)))
-
-            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
-                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
-        """
 
         plt.ylim(bottom=0.0)
 
@@ -431,11 +407,6 @@ def plot_actual(run_path, params, df):
             if index == len(df_temp.index) - 1:
                 plt.xlabel(r"$\tau$")
 
-            if ii == 0:
-                label = "%s" % row['beta']
-            else:
-                label = None
-
             if xgrid == []:
                 continue
 
@@ -443,15 +414,13 @@ def plot_actual(run_path, params, df):
             ygrid = np.array(ygrid)
             ygrid = ygrid / row['nvec']
 
-            plt.loglog(xgrid, ygrid, 'o', markersize=5, label=label)
+            plt.loglog(xgrid, ygrid, 'o', markersize=5)
             ax.tick_params(axis='both', which='minor')
 
             plt.ylabel(r"$\Pi_B(t_w, t_w + %.02f t_w)$" % delta)
 
         plt.text(0.5, 0.05, "%s = %i" % (p['group_by'], g),
                  ha='center', va='top', transform=ax.transAxes, fontsize=14)
-        """
-        last_n = p['last_n_points']
 
         plt.gca().set_prop_cycle(None)  # Reset colormap
         for index, row in df_temp.iterrows():
@@ -461,25 +430,26 @@ def plot_actual(run_path, params, df):
                                          'memory_basin.pkl')
             pi_basin = pickle.load(open(pi_basin_path, 'rb'))
 
-            ygrid = pi_basin[0]
             xgrid = pi_basin[1]
             delta = pi_basin[2]
 
             xgrid = np.array(xgrid)
-            ygrid = np.array(ygrid)
-            ygrid = ygrid / np.max(ygrid)
 
-            logx = np.log10(xgrid)
-            logy = np.log10(ygrid)
-            m = np.polyfit(logx, logy, deg=1)
-            poly = np.poly1d(m)
+            if ii == 0:
+                label = "%s" % row['beta']
+            else:
+                label = None
 
-            def yfit(x):
-                return 10.0**(poly(np.log10(x)))
+            hxw_ = hxw(2.0 - row['beta'] / row['lambda_prime'], delta)
+            if hxw_ < 1e-14:
+                hxw_ *= -1  # ignore
+                label = None
+            line = [hxw_ for __ in range(len(xgrid))]
 
-            plt.plot(xgrid, yfit(xgrid), '--', alpha=0.5,
-                     label="y = %.02f * x + %.02f" % (m[0], m[1]))
-        """
+            if label is not None:
+                label = label + r" ($H_x(w) = %.02f$)" % hxw_
+
+            plt.loglog(xgrid, line, '--', alpha=0.5, label=label)
 
         plt.ylim(bottom=0.0)
 
