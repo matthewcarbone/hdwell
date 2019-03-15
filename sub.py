@@ -11,10 +11,12 @@ from hdwell.aux import pure_mc_sampling
 
 
 def protocol1(beta, dim, nmc, nvec, lambda_prime, ptype,
-              target_run_directory, n_report, save_all_energies):
+              target_run_directory, n_report, save_all_energies,
+              save_all_stats):
 
     pure_mc_sampling(dim, beta, lambda_prime, nmc, nvec, ptype, n_report,
-                     target_run_directory, save_all_energies)
+                     target_run_directory, save_all_energies,
+                     save_all_stats)
 
 
 if __name__ == '__main__':
@@ -28,7 +30,9 @@ if __name__ == '__main__':
     target_run_directory = str(sys.argv[8])
     n_report = int(sys.argv[9])
     save_all_energies = bool(int(sys.argv[10]))
+    save_all_stats = bool(int(sys.argv[11]))
 
     if protocol == 1:
         protocol1(beta, dim, nmc, nvec, lambda_prime, ptype,
-                  target_run_directory, n_report, save_all_energies)
+                  target_run_directory, n_report, save_all_energies,
+                  save_all_stats)

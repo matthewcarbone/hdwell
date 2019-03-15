@@ -17,5 +17,6 @@
 #    08: Target run directory to save observables
 #    09: Number of times to report
 #    10: Save all energies?
+#    11: Save all statistical information?
 
-python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
+python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}"
