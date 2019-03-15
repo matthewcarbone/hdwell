@@ -443,8 +443,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
             counter += 1
             if save_all_stats:
                 save_all_stats_energy[counter_save_all_stats_E, :] = e0
-                save_all_stats_min_avg_r[counter_save_all_stats_R, :] = \
-                    avg_min_r
+                save_all_stats_min_avg_r[counter_save_all_stats_R, :] = min_r
                 counter_save_all_stats_E += 1
                 counter_save_all_stats_R += 1
 
