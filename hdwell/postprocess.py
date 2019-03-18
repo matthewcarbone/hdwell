@@ -617,15 +617,15 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                         protocol=pickle.HIGHEST_PROTOCOL)
 
             # Psi functions
-            average_psi_b = np.mean(psi_b_mat, axis=1)
-            std_psi_b = np.std(psi_b_mat, axis=1)
+            average_psi_b = np.mean(psi_b_mat, axis=0)
+            std_psi_b = np.std(psi_b_mat, axis=0)
             psi_b_path = os.path.join(concat_loc_path, 'psi_b.pkl')
             pickle.dump([list(current_psi_b_keys), average_psi_b, std_psi_b],
                         open(psi_b_path, 'wb'),
                         protocol=pickle.HIGHEST_PROTOCOL)
 
-            average_psi_c = np.mean(psi_c_mat, axis=1)
-            std_psi_c = np.std(psi_c_mat, axis=1)
+            average_psi_c = np.mean(psi_c_mat, axis=0)
+            std_psi_c = np.std(psi_c_mat, axis=0)
             psi_c_path = os.path.join(concat_loc_path, 'psi_c.pkl')
             pickle.dump([list(current_psi_c_keys), average_psi_c, std_psi_c],
                         open(psi_c_path, 'wb'),
