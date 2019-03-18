@@ -497,11 +497,11 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
                     protocol=pickle.HIGHEST_PROTOCOL)
         pickle.dump(config_recorder,
                     open(os.path.join(data_directory,
-                                      "sas_psi_config.pkl"), 'wb'),
+                                      "sas_memory_config.pkl"), 'wb'),
                     protocol=pickle.HIGHEST_PROTOCOL)
         pickle.dump(basin_recorder,
                     open(os.path.join(data_directory,
-                                      "sas_psi_basin.pkl"), 'wb'),
+                                      "sas_memory_basin.pkl"), 'wb'),
                     protocol=pickle.HIGHEST_PROTOCOL)
 
     print("Done. %.05f h" % total_time)
