@@ -15,6 +15,7 @@ import matplotlib as mpl
 import logging
 from cycler import cycler
 from itertools import product
+from collections import Counter
 
 from .aux import order_of_magnitude, hxw
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
@@ -477,15 +478,15 @@ def concat_loader(load_path):
 
     # Load in psi's:
     psi_basin = pickle.load(open(os.path.join(load_path,
-                                              'sas_psi_basin.pkl'), 'rb'))
+                                              'psi_basin.pkl'), 'rb'))
     psi_config = pickle.load(open(os.path.join(load_path,
-                                               'sas_psi_config.pkl'), 'rb'))
+                                               'psi_config.pkl'), 'rb'))
 
-    # Load in the memories:
+    # Load in the memories: sas_memory_basin.pkl
     mem_basin = pickle.load(open(os.path.join(load_path,
-                                              'memory_basin.pkl'), 'rb'))
+                                              'sas_memory_basin.pkl'), 'rb'))
     mem_config = pickle.load(open(os.path.join(load_path,
-                                               'memory_config.pkl'), 'rb'))
+                                               'sas_memory_config.pkl'), 'rb'))
 
     return [all_nrg, all_r, psi_basin, psi_config, mem_basin, mem_config]
 
@@ -515,12 +516,50 @@ def concatenator(data_path, prompt=True, s_by='beta'):
 
             # Within each of these sub dataframes, concatenate
             index = 0
+            N = len(sub_df)
+            if len(df['nvec'].unique()) != 1:
+                raise RuntimeError("Non-unique nvec.")
+            print("len is ", N)
+            # Initialize some matrices as None
+            e_mat, r_mat, mem_c_mat, mem_b_mat = None, None, None, None
+
             for __, row in sub_df.iterrows():
                 str_row = str(int(row['loc'])).zfill(zf_index)
                 [e, r, psi_b, psi_c, mem_b, mem_c] = \
                     concat_loader(os.path.join(run_path, str_row))
-                print(e.shape)
-                break
+ 
+                if index == 0:
+                    e_mat = e
+                    r_mat = r
+                    mem_c_mat = mem_c
+                    mem_b_mat = mem_b
+
+                    current_psi_b_keys = psi_b.keys()
+                    psi_b_mat = np.zeros((N, len(current_psi_b_keys)), dtype=int)
+                    psi_b_mat[0, :] = list(psi_b.values())
+                    #psi_b_mat = np.concatenate((psi_b_mat, np.zeros((N, 1))), axis=-1)
+                    
+                else:
+                    e_mat = np.concatenate((e_mat, e), axis=1)
+                    r_mat = np.concatenate((r_mat, r), axis=1)
+                    mem_c_mat = np.concatenate((mem_c_mat, mem_c), axis=1)
+                    mem_b_mat = np.concatenate((mem_b_mat, mem_b), axis=1)
+                    
+                    if current_psi_b_keys != psi_b.keys():
+                        diff = len(psi_b.keys()) - len(current_psi_b_keys)
+                        current_psi_b_keys = psi_b.keys()
+                        psi_b_mat = np.concatenate((psi_b_mat, np.zeros((N, diff))), axis=-1)
+
+                    psi_b_mat[index, :] = list(psi_b.values())
+
+                #raise RuntimeError
+                #print(e_mat.shape, r_mat.shape, mem_c_mat.shape, mem_b_mat.shape)
+                #print(len(psi_b.keys()))
+                #print(current_psi_b_keys)
+                index += 1
+                #if index == 2:
+                #    break
+            print(psi_b_mat)
 
 
 
