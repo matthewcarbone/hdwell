@@ -527,42 +527,48 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                 str_row = str(int(row['loc'])).zfill(zf_index)
                 [e, r, psi_b, psi_c, mem_b, mem_c] = \
                     concat_loader(os.path.join(run_path, str_row))
- 
+
                 if index == 0:
                     e_mat = e
                     r_mat = r
                     mem_c_mat = mem_c
                     mem_b_mat = mem_b
 
+                    current_psi_c_keys = psi_c.keys()
+                    psi_c_mat = np.zeros((N, len(current_psi_c_keys)),
+                                         dtype=int)
+                    psi_c_mat[0, :] = list(psi_c.values())
+
                     current_psi_b_keys = psi_b.keys()
-                    psi_b_mat = np.zeros((N, len(current_psi_b_keys)), dtype=int)
+                    psi_b_mat = np.zeros((N, len(current_psi_b_keys)),
+                                         dtype=int)
                     psi_b_mat[0, :] = list(psi_b.values())
-                    #psi_b_mat = np.concatenate((psi_b_mat, np.zeros((N, 1))), axis=-1)
-                    
+
                 else:
                     e_mat = np.concatenate((e_mat, e), axis=1)
                     r_mat = np.concatenate((r_mat, r), axis=1)
                     mem_c_mat = np.concatenate((mem_c_mat, mem_c), axis=1)
                     mem_b_mat = np.concatenate((mem_b_mat, mem_b), axis=1)
-                    
+
+                    if current_psi_c_keys != psi_c.keys():
+                        diff = len(psi_c.keys()) - len(current_psi_c_keys)
+                        current_psi_c_keys = psi_c.keys()
+                        psi_c_mat = \
+                            np.concatenate((psi_c_mat, np.zeros((N, diff))),
+                                           axis=-1)
+                    psi_c_mat[index, :] = list(psi_c.values())
+
                     if current_psi_b_keys != psi_b.keys():
                         diff = len(psi_b.keys()) - len(current_psi_b_keys)
                         current_psi_b_keys = psi_b.keys()
-                        psi_b_mat = np.concatenate((psi_b_mat, np.zeros((N, diff))), axis=-1)
-
+                        psi_b_mat = \
+                            np.concatenate((psi_b_mat, np.zeros((N, diff))),
+                                           axis=-1)
                     psi_b_mat[index, :] = list(psi_b.values())
 
-                #raise RuntimeError
-                #print(e_mat.shape, r_mat.shape, mem_c_mat.shape, mem_b_mat.shape)
-                #print(len(psi_b.keys()))
-                #print(current_psi_b_keys)
                 index += 1
-                #if index == 2:
-                #    break
-            print(psi_b_mat)
-
-
-
+            print(e_mat.shape, r_mat.shape, mem_c_mat.shape, mem_b_mat.shape,
+                  psi_c_mat.shape, psi_b_mat.shape)
 
 
 def plotting_tool(data_path, plotting_params, prompt=True):
