@@ -126,8 +126,8 @@ def run_all(params, target_directory, prompt=True):
               % Np)
         print("    * Longest job runtime contains 10^%i monte carlo timesteps,"
               % max_nmc)
-        print("      %i 'particles, and %i clones' (parallel executions)"
-              % (max_nvec, max_nvec))
+        print("      %i 'particles', and %i dim (parallel executions)"
+              % (max_nvec, max_n))
         if nvec_loops_len != 0:
             print("    * %a execution(s) for: %a."
                   % (nvec_loops, np.ndarray.tolist(unique_nvec)))
