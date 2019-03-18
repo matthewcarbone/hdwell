@@ -497,7 +497,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
 
     for directory in all_dirs:
         run_path = os.path.join(data_path, directory)
-        makedir_if_not_exist(run_path, 'concat')
+        makedir_if_not_exist(os.path.join(run_path, 'concat'))
 
         if prompt:
             x_ = input("Concat: %s" % run_path)
@@ -552,7 +552,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                     psi_b_mat[0, :] = list(psi_b.values())
 
                     # Load in the energy/min_radius grids:
-                    st = os.path.join(run_path, str_row, 'sample_e.pkl.pkl')
+                    st = os.path.join(run_path, str_row, 'sample_e.pkl')
                     e_grid = pickle.load(open(st, 'rb'))
 
                     # Load in the memory grids:
