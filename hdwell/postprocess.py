@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import logging
 from cycler import cycler
+from itertools import product
 
 from .aux import order_of_magnitude, hxw
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
@@ -465,10 +466,71 @@ def plot_actual(run_path, params, df):
                 bbox_inches='tight')
 
 
+def concat_loader(load_path):
+
+    # Load in all energies:
+    all_nrg = pickle.load(open(os.path.join(load_path, 'sas_all_e.pkl'), 'rb'))
+
+    # Load in all min average radii:
+    all_r = pickle.load(open(os.path.join(load_path,
+                                          'sas_min_avg_r_e.pkl'), 'rb'))
+
+    # Load in psi's:
+    psi_basin = pickle.load(open(os.path.join(load_path,
+                                              'sas_psi_basin.pkl'), 'rb'))
+    psi_config = pickle.load(open(os.path.join(load_path,
+                                               'sas_psi_config.pkl'), 'rb'))
+
+    # Load in the memories:
+    mem_basin = pickle.load(open(os.path.join(load_path,
+                                              'memory_basin.pkl'), 'rb'))
+    mem_config = pickle.load(open(os.path.join(load_path,
+                                               'memory_config.pkl'), 'rb'))
+
+    return [all_nrg, all_r, psi_basin, psi_config, mem_basin, mem_config]
+
+
+def concatenator(data_path, prompt=True, s_by='beta'):
+    all_dirs = os.listdir(data_path)  # List all run directories.
+    all_dirs.sort()
+
+    for directory in all_dirs:
+        run_path = os.path.join(data_path, directory)
+        param_path = os.path.join(run_path, 'params.csv')
+        df = pd.read_csv(param_path, index_col=0)
+
+        # Get all combinations of unique entries in the df.
+        a = [df[name].unique() for name, values in df.iteritems()
+             if name != 'loc' and name != 'nvec']
+        col_headers = [name for name, values in df.iteritems()
+                       if name != 'loc' and name != 'nvec']
+        all_combos = list(product(*a))
+        zf_index = order_of_magnitude(1 + np.max(df['loc'].unique())) + 1
+
+        for jj, combo in enumerate(all_combos):
+            query_string = ['%s == "%s"' % (col_headers[ii], combo[ii])
+                            for ii in range(len(col_headers))]
+            query_string = ' and '.join(query_string)
+            sub_df = df.query(query_string)
+
+            # Within each of these sub dataframes, concatenate
+            index = 0
+            for __, row in sub_df.iterrows():
+                str_row = str(int(row['loc'])).zfill(zf_index)
+                [e, r, psi_b, psi_c, mem_b, mem_c] = \
+                    concat_loader(os.path.join(run_path, str_row))
+                print(e.shape)
+                break
+
+
+
+
+
 def plotting_tool(data_path, plotting_params, prompt=True):
     """Plots all data available in the `DATA_hdwell` directory."""
 
     all_dirs = os.listdir(data_path)  # List all run directories.
+    all_dirs.sort()
 
     for directory in all_dirs:
         run_path = os.path.join(data_path, directory)
