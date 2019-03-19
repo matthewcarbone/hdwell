@@ -15,7 +15,6 @@ import matplotlib as mpl
 import logging
 from cycler import cycler
 from itertools import product
-from collections import Counter
 
 from .aux import order_of_magnitude, hxw, makedir_if_not_exist
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
@@ -481,6 +480,15 @@ def concat_loader(load_path):
                                               'psi_basin.pkl'), 'rb'))
     psi_config = pickle.load(open(os.path.join(load_path,
                                                'psi_config.pkl'), 'rb'))
+
+    print(psi_basin)
+
+    # Normalize psi_basin/config:
+    norm_basin = np.sum(list(psi_basin.values()))
+    for key, value in psi_basin.items():
+        value /= norm_basin
+
+    print(psi_basin)
 
     # Load in the memories: sas_memory_basin.pkl
     mem_basin = pickle.load(open(os.path.join(load_path,
