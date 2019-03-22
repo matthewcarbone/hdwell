@@ -101,7 +101,7 @@ def energy(x, lmbd=1.0, ptype='log'):
         return np.log(np.sqrt(np.sum(x**2, axis=1))) / lmbd
 
 
-def sample_nball(N, nMC=1, n_vec=100):
+def sample_nball(N, nMC=1, n_vec=100, yzero=False):
     """Uses the `smart` sampling method as described by Barthe, Guedon,
     Mendelson and Naor in Annals of Probability 33(2), 480 (2005). Samples on
     the unit N-ball uniformally.
@@ -114,6 +114,8 @@ def sample_nball(N, nMC=1, n_vec=100):
         Number of monte carlo time steps, should always be 1. Default is 1.
     n_vec : int
         Number of "particles" in the "ensemble". Default is 100.
+    yzero : bool
+        If False, samples uniformally on the surface of the ball.
 
     Returns a NumPy array which contains positions for every dimension,
     monte carlo timestep and particle. Again note that because the update
@@ -122,7 +124,10 @@ def sample_nball(N, nMC=1, n_vec=100):
 
     x_vector = np.random.normal(scale=1.0 / np.sqrt(2.0), size=(nMC, N, n_vec))
     sum_of_squares = np.sum(x_vector**2, axis=1, keepdims=True)
-    y = np.random.exponential(scale=1.0, size=(nMC, 1, n_vec))
+    if yzero:
+        y = 0
+    else:
+        y = np.random.exponential(scale=1.0, size=(nMC, 1, n_vec))
     vec_final = x_vector / np.sqrt(sum_of_squares + y)
     return vec_final
 
@@ -185,11 +190,23 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
                      data_directory, save_all_energies, save_all_stats,
-                     verbose=True):
+                     verbose=True, randomwalk=True, xp_param=30.):
     """Executes a purely random sampling algorithm over the unit N-ball.
     Note that this function is meant to be called from within a compute node.
     It is assumed that all output will be piped to a SLURM (or related) output
-    file and therefore no logging will be used here.
+    file and therefore no logging will be used here. Uses Metropolis
+    selection criteria by default unless `randomwalk` is set to True. In that
+    case the `xp_param` == L  must be specified, as it defines the exponential
+    distribution from which the new points are sampled:
+
+    p(x) = L * e^(-Lx)
+
+    A good default value for L would probably be ~30, ensuring that 95% of
+    points or so fall <0.1, ensuring a very small step size. The larger the
+    value of `xp_param`, the more concentrated around the initial value the
+    sampling will be. Note as well that the only thing that changes between
+    purely random sampling and a random walk is the way that the "next" point
+    is chosen.
 
     Parameters
     ----------
@@ -229,6 +246,9 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
             * Same for the average minimum radius
 
     """
+
+    if randomwalk and xp_param is None:
+        raise RuntimeError("Need to initialize xp_param with random walk")
 
     nMC = int(10**nMC_lg)
     lambd_ = lambdaprime / N
@@ -340,9 +360,17 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
             all_e[ii, :] = e0
 
         # Generate a new configuration.
-        xf = sample_nball(N, nMC=1, n_vec=n_vec)
+        if randomwalk:
+            on_surface = sample_nball(N, nMC=1, n_vec=n_vec, yzero=True)
+            exp_rand = np.random.exponential(scale=1.0 / xp_param,
+                                             size=(1, 1, n_vec))
+            xf = x0 + on_surface * exp_rand  # CHECK THIS LATER
+        else:
+            xf = sample_nball(N, nMC=1, n_vec=n_vec)
         ef = energy(xf, lmbd=lambd_, ptype=ptype)
         deltaE = ef - e0
+
+        r_temp = np.sqrt(np.sum(xf**2, axis=1)).squeeze()
 
         # "Particles" in which dE < 0.
         dE_down = np.where(deltaE < 0.0)[1]
@@ -353,7 +381,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
         # Similarly, moves accepted to go up, or move rejected entirely.
         dE_up = np.where((deltaE >= 0.0) & (rand_vec <= w_vec))[1]
-        dE_stay = np.where((deltaE >= 0.0) & (rand_vec > w_vec))[1]
+        dE_stay = np.where(((deltaE >= 0.0) & (rand_vec > w_vec)) |
+                           (r_temp > 1))[1]
 
         # Update the xf vector where necessary.
         xf[:, :, dE_stay] = x0[:, :, dE_stay]
