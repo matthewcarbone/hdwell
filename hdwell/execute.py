@@ -31,10 +31,13 @@ Proceed? (y for yes)
 
 
 def execute_protocol_1(params, target_run_directory, df, cluster=True,
-                       prompt=True):
+                       prompt=True, markov_chain=False):
     """Docstring TODO"""
 
     executable = 'sbatch'
+    protocol = params['protocol']
+    xp_param = params['xp_param']
+    print(xp_param, protocol, int(markov_chain))
 
     if not cluster:
         executable = 'bash'
@@ -61,16 +64,20 @@ def execute_protocol_1(params, target_run_directory, df, cluster=True,
         target_run_specific = os.path.join(target_run_directory, row['loc'])
 
         execution_string = \
-            "%s actual1.sbatch 1 %f %i %i %i %f %s %s %i %i %i" \
-            % (executable, beta, dim, nmc, nvec, lmbdp, ptype,
+            "%s actual1.sbatch %i %f %i %i %i %f %s %s %i %i %i %i %f" \
+            % (executable, protocol, beta, dim, nmc, nvec, lmbdp, ptype,
                target_run_specific, n_report, d_save_energies,
-               int_save_all_stats)
+               int_save_all_stats, int(markov_chain), xp_param)
 
         process = subprocess.Popen(execution_string, shell=True,
                                    stdout=subprocess.PIPE,
                                    universal_newlines=True)
         process.wait()
         out, __ = process.communicate()
+
+        if params['one_run']:
+            break
+
         exitcode = process.returncode
         exitcodes.append(exitcode)
 
@@ -177,3 +184,6 @@ def run_all(params, target_directory, prompt=True):
     if protocol == 1:
         execute_protocol_1(params, target_run_directory, df, cluster=cluster,
                            prompt=prompt)
+    elif protocol == 2:
+        execute_protocol_1(params, target_run_directory, df, cluster=cluster,
+                           prompt=prompt, markov_chain=True)

@@ -11,14 +11,21 @@
 #     Determines the kind of run we will be doing. Default to pure monte carlo
 #     sampling on the unit ball. The protocols are as follows:
 #         protocol : int
-#             1 - Sample on the unit ball in a purely random fashion.
+#             1 - Sample on the unit ball in a purely random fashion: Meropolis
+#                 selection criteria.
+#             2 - Sample on the unit ball using a Markov chain random walk,
+#                 also with a Metropolis selection criteria.
 #         directory_override : str
 #             Directory to which a data file should be created and all data
 #             saved. Special option is 'wd', which stands for working
 #             directory. Otherwise, specify the absolute path.
+#         one_run : bool
+#             If true, will exit after the first permutation, useful for
+#             debugging.
 
-protocol: 1
+protocol: 2
 directory_override: 'wd'
+one_run: False
 
 # Execution Parameters --------------------------------------------------------
 #     All permutations of parameters listed will be executed independently. The
@@ -41,6 +48,13 @@ directory_override: 'wd'
 #         ptype : str
 #             Type of potential we're considering. Current choices are listed
 #             in aux.py.
+#         save_stat : bool
+#             Whether or not to save statistical information (e.g. save much
+#             more data for statistical analysis across `nvec_multiplier`
+#             runs).
+#         xp_param : float
+#             Only used in random walk sampling: this scales the radius of the
+#             next-selected point via an exponential distribution.
 
 execution_parameters:
   beta:  [1.3, 1.5, 1.6]
@@ -53,6 +67,7 @@ nvec_multiplier: 20
 lmbdp:         1.0
 ptype:         'log'
 save_stat:     True
+xp_param:      30.0
 
 
 
@@ -69,7 +84,7 @@ save_stat:     True
 #             surface.
 
 n_report:          200
-smart_sampling :   True
+smart_sampling :   True  # Keep as True, not yet implemented
 
 
 # Danger zone -----------------------------------------------------------------

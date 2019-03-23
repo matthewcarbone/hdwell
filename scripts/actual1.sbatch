@@ -18,5 +18,8 @@
 #    09: Number of times to report
 #    10: Save all energies?
 #    11: Save all statistical information?
+#    12: Markov chain?
+#    13: Exponential distribution scale parameter
 
-python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}"
+python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" \
+"${12}" "${13}"
