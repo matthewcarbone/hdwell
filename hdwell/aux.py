@@ -125,7 +125,7 @@ def sample_nball(N, nMC=1, n_vec=100, yzero=False):
     x_vector = np.random.normal(scale=1.0 / np.sqrt(2.0), size=(nMC, N, n_vec))
     sum_of_squares = np.sum(x_vector**2, axis=1, keepdims=True)
     if yzero:
-        y = 0
+        y = 0.0
     else:
         y = np.random.exponential(scale=1.0, size=(nMC, 1, n_vec))
     vec_final = x_vector / np.sqrt(sum_of_squares + y)
@@ -190,7 +190,7 @@ def thresholds(N, beta, lambdaprime, ptype='log'):
 
 def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
                      data_directory, save_all_energies, save_all_stats,
-                     verbose=True, randomwalk=True, xp_param=30.):
+                     verbose=True, randomwalk=False, xp_param=30.):
     """Executes a purely random sampling algorithm over the unit N-ball.
     Note that this function is meant to be called from within a compute node.
     It is assumed that all output will be piped to a SLURM (or related) output
@@ -222,7 +222,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         probably should not be changed. This scaling also guarantees an
         extensive energy with respect to the dimension.
     nMC_lg : int
-        Total number of monte carlo timesteps to perform is 10^nMC_lg
+        Total number of monte carlo timesteps to perform is 10^nMC_lg.
     n_vec : int
         Total number of "particles" in the "ensemble".
     ptype : str
@@ -244,13 +244,22 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         the following statistical information to disk:
             * Energy for every clone, at each point at which we sample it
             * Same for the average minimum radius
-
+            * The entire basin recorder matrix
+            * The entire config recorder matrix
+    verbose : bool
+        Whether or not to pipe current status at increments to console. Default
+        is True.
+    randomwalk : bool
+        If set to False, performs purely random MC sampling over the entire
+        space (unit ball). Else if True, executes Markov-chain MC. Default is
+        False.
+    xp_param : float
+        Scale parameter which controls the scaling of the radius during Markov-
+        chain MC. Ignored if `randomwalk` is set to False.
     """
 
-    print("randomwalk:", randomwalk)
-
     if randomwalk and xp_param is None:
-        raise RuntimeError("Need to initialize xp_param with random walk")
+        raise RuntimeError("Need to initialize xp_param with random walk.")
 
     nMC = int(10**nMC_lg)
     lambd_ = lambdaprime / N
@@ -282,7 +291,9 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     # Some particles will already be in a basin.
     n_basin[np.where(e0 < e_threshold)[1]] += 1
 
-    # Timesteps at which to sample the energy.
+    # Timesteps at which to sample the energy. Using np.unique avoids
+    # accidental duplicates. The price we pay is that we don't actually sample
+    # `ENERGY_SAMPLE` points, we will sample a few less.
     sample_e = \
         np.unique(np.logspace(0, nMC_lg, ENERGY_SAMPLE, dtype=int,
                               endpoint=True))
@@ -347,17 +358,28 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     counter2 = 0
     counter_save_all_stats_E = 0
     counter_save_all_stats_R = 0
-    rejected = 0
-    for ii in range(100 + 1):
+    rejected_total = 0
+    up_total = 0
+    down_total = 0
+
+    # Rates are sampled at the same time as the energies.
+    rejection_rate = []
+    cumulative_rejection_rate = []
+    up_rate = []
+    cumulative_up_rate = []
+    down_rate = []
+    cumulative_down_rate = []
+
+    for ii in range(nMC + 1):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
             ctime = time()
-            print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h ~ rej: %.02f%%"
+            print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h ~ c-rej: %.02f%%"
                   % (str(ii).zfill(zfill_index), str(nMC).zfill(zfill_index),
                      (ii / nMC * 100.0), ((ctime - t0) / 3600.0),
                      ((ctime - t0) / 3600.0 * nMC / (ii + 1)),
-                     (100.0 * rejected / (ii + 1) / n_vec)))
+                     (100.0 * rejected_total / (ii + 1) / n_vec)))
             sys.stdout.flush()
 
         if save_all_energies:
@@ -365,10 +387,18 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
         # Generate a new configuration.
         if randomwalk:
+            # The random walk first samples a point randomly & uniformally on
+            # the surface of the unit n-ball.
             on_surface = sample_nball(N, nMC=1, n_vec=n_vec, yzero=True)
+
+            # Next, a radius is sampled from an exponential distribution and
+            # used to scale that ball.
             exp_rand = np.random.exponential(scale=1.0 / xp_param,
                                              size=(1, 1, n_vec))
-            xf = x0 + on_surface * exp_rand  # CHECK THIS LATER
+
+            # The `xf` point is then updated by walking the particle from the
+            # old configuration `x0` to the new one.
+            xf = x0 + on_surface * exp_rand
         else:
             xf = sample_nball(N, nMC=1, n_vec=n_vec)
         ef = energy(xf, lmbd=lambd_, ptype=ptype)
@@ -388,7 +418,21 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         dE_stay = np.where(((deltaE >= 0.0) & (rand_vec > w_vec)) |
                            (r_temp > 1))[1]
 
-        rejected += len(dE_stay)
+        rejected = len(dE_stay)
+        rejected_total += rejected
+        up = len(dE_up)
+        up_total += up
+        down = len(dE_down)
+        down_total += down
+
+        # Append the rates at the same times as the energies.
+        if ii % increment == 0:
+            rejection_rate.append(rejected / n_vec)
+            cumulative_rejection_rate.append(rejected_total / (ii + 1) / n_vec)
+            up_rate.append(up / n_vec)
+            cumulative_up_rate.append(up_total / (ii + 1) / n_vec)
+            down_rate.append(down / n_vec)
+            cumulative_down_rate.append(down_total / (ii + 1) / n_vec)
 
         # Update the xf vector where necessary.
         xf[:, :, dE_stay] = x0[:, :, dE_stay]
@@ -515,6 +559,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
                 protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(avg_min_r,
                 open(os.path.join(data_directory, "avg_min_r.pkl"), 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump([rejection_rate, cumulative_rejection_rate,
+                 up_rate, cumulative_up_rate, down_rate, cumulative_down_rate],
+                open(os.path.join(data_directory, "rates.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
 
     if save_all_energies:
