@@ -247,6 +247,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
     """
 
+    print("randomwalk:", randomwalk)
+
     if randomwalk and xp_param is None:
         raise RuntimeError("Need to initialize xp_param with random walk")
 
@@ -345,15 +347,17 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     counter2 = 0
     counter_save_all_stats_E = 0
     counter_save_all_stats_R = 0
-    for ii in range(nMC + 1):
+    rejected = 0
+    for ii in range(100 + 1):
 
         # Report at designated timesteps.
         if ii % increment == 0 and verbose:
             ctime = time()
-            print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h"
+            print("%s/%s (%.02f%%) ~ %.02f (eta %.02f) h ~ rej: %.02f%%"
                   % (str(ii).zfill(zfill_index), str(nMC).zfill(zfill_index),
                      (ii / nMC * 100.0), ((ctime - t0) / 3600.0),
-                     ((ctime - t0) / 3600.0 * nMC / (ii + 1))))
+                     ((ctime - t0) / 3600.0 * nMC / (ii + 1)),
+                     (100.0 * rejected / (ii + 1) / n_vec)))
             sys.stdout.flush()
 
         if save_all_energies:
@@ -383,6 +387,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         dE_up = np.where((deltaE >= 0.0) & (rand_vec <= w_vec))[1]
         dE_stay = np.where(((deltaE >= 0.0) & (rand_vec > w_vec)) |
                            (r_temp > 1))[1]
+
+        rejected += len(dE_stay)
 
         # Update the xf vector where necessary.
         xf[:, :, dE_stay] = x0[:, :, dE_stay]
