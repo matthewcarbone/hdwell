@@ -15,6 +15,7 @@ import matplotlib as mpl
 import logging
 from cycler import cycler
 from itertools import product
+from tqdm import tqdm
 
 from .aux import order_of_magnitude, hxw, makedir_if_not_exist
 from .templates import PLOTTING_INFO_TEMPLATE, PLOTTING_PROTOCOL_MAP
@@ -554,7 +555,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
         all_combos = list(product(*a))
         zf_index = order_of_magnitude(1 + np.max(df['loc'].unique())) + 1
 
-        for jj, combo in enumerate(all_combos):
+        for jj, combo in tqdm(enumerate(all_combos)):
             query_string = ['%s == "%s"' % (col_headers[ii], combo[ii])
                             for ii in range(len(col_headers))]
             query_string = ' and '.join(query_string)
