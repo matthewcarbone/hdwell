@@ -481,14 +481,10 @@ def concat_loader(load_path):
     psi_config = pickle.load(open(os.path.join(load_path,
                                                'psi_config.pkl'), 'rb'))
 
-    print(psi_basin)
-
     # Normalize psi_basin/config:
     norm_basin = np.sum(list(psi_basin.values()))
     for key, value in psi_basin.items():
         value /= norm_basin
-
-    print(psi_basin)
 
     # Load in the memories: sas_memory_basin.pkl
     mem_basin = pickle.load(open(os.path.join(load_path,
@@ -497,6 +493,43 @@ def concat_loader(load_path):
                                                'sas_memory_config.pkl'), 'rb'))
 
     return [all_nrg, all_r, psi_basin, psi_config, mem_basin, mem_config]
+
+
+def concatenate_psi(psi_b_list, psi_c_list):
+    N = len(psi_b_list)
+    np.testing.assert_equal(N, len(psi_c_list))
+    n_bins_b = len(psi_b_list[0])
+    n_bins_c = len(psi_c_list[0])
+    psi_b_mat = np.zeros((N, n_bins_b))
+    psi_c_mat = np.zeros((N, n_bins_c))
+
+    for nn in range(N):
+        bb = 0
+        cl = psi_b_list[nn]
+        cl_keys = list(cl.keys())
+        cl_vals = list(cl.values())
+        while bb < n_bins_b:
+            try:
+                psi_b_mat[nn, cl_keys[bb]] = cl_vals[bb]
+                bb += 1
+            except IndexError:
+                psi_b_mat = \
+                    np.concatenate((psi_b_mat, np.zeros(N, 1)), axis=-1)
+
+    for nn in range(N):
+        bb = 0
+        cl = psi_c_list[nn]
+        cl_keys = list(cl.keys())
+        cl_vals = list(cl.values())
+        while bb < n_bins_b:
+            try:
+                psi_c_mat[nn, cl_keys[bb]] = cl_vals[bb]
+                bb += 1
+            except IndexError:
+                psi_c_mat = \
+                    np.concatenate((psi_c_mat, np.zeros(N, 1)), axis=-1)
+
+    return [psi_b_mat, psi_c_mat]
 
 
 def concatenator(data_path, prompt=True, s_by='beta'):
@@ -531,33 +564,26 @@ def concatenator(data_path, prompt=True, s_by='beta'):
 
             # Within each of these sub dataframes, concatenate
             index = 0
-            N = len(sub_df)
             if len(df['nvec'].unique()) != 1:
                 raise RuntimeError("Non-unique nvec.")
 
             # Initialize some matrices as None
             e_mat, r_mat, mem_c_mat, mem_b_mat = None, None, None, None
+            psi_b_list = []
+            psi_c_list = []
 
             for __, row in sub_df.iterrows():
                 str_row = str(int(row['loc'])).zfill(zf_index)
                 [e, r, psi_b, psi_c, mem_b, mem_c] = \
                     concat_loader(os.path.join(run_path, str_row))
+                psi_b_list.append(psi_b)
+                psi_c_list.append(psi_c)
 
                 if index == 0:
                     e_mat = e
                     r_mat = r
                     mem_c_mat = mem_c
                     mem_b_mat = mem_b
-
-                    current_psi_c_keys = psi_c.keys()
-                    psi_c_mat = np.zeros((N, len(current_psi_c_keys)),
-                                         dtype=int)
-                    psi_c_mat[0, :] = list(psi_c.values())
-
-                    current_psi_b_keys = psi_b.keys()
-                    psi_b_mat = np.zeros((N, len(current_psi_b_keys)),
-                                         dtype=int)
-                    psi_b_mat[0, :] = list(psi_b.values())
 
                     # Load in the energy/min_radius grids:
                     st = os.path.join(run_path, str_row, 'sample_e.pkl')
@@ -574,23 +600,9 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                     mem_c_mat = np.concatenate((mem_c_mat, mem_c), axis=1)
                     mem_b_mat = np.concatenate((mem_b_mat, mem_b), axis=1)
 
-                    if psi_c.keys() not in current_psi_c_keys:
-                        diff = len(psi_c.keys()) - len(current_psi_c_keys)
-                        current_psi_c_keys = psi_c.keys()
-                        psi_c_mat = \
-                            np.concatenate((psi_c_mat, np.zeros((N, diff))),
-                                           axis=-1)
-                    psi_c_mat[index, :] = list(psi_c.values())
-
-                    if psi_c.keys() not in current_psi_c_keys:
-                        diff = len(psi_b.keys()) - len(current_psi_b_keys)
-                        current_psi_b_keys = psi_b.keys()
-                        psi_b_mat = \
-                            np.concatenate((psi_b_mat, np.zeros((N, diff))),
-                                           axis=-1)
-                    psi_b_mat[index, :] = list(psi_b.values())
-
                 index += 1
+
+            [psi_b_mat, psi_c_mat] = concatenate_psi(psi_b_list, psi_c_list)
 
             concat_loc_path = os.path.join(run_path, 'concat', first_str_row)
             makedir_if_not_exist(concat_loc_path)
@@ -628,14 +640,14 @@ def concatenator(data_path, prompt=True, s_by='beta'):
             average_psi_b = np.mean(psi_b_mat, axis=0)
             std_psi_b = np.std(psi_b_mat, axis=0)
             psi_b_path = os.path.join(concat_loc_path, 'psi_b.pkl')
-            pickle.dump([list(current_psi_b_keys), average_psi_b, std_psi_b],
+            pickle.dump([average_psi_b, std_psi_b],
                         open(psi_b_path, 'wb'),
                         protocol=pickle.HIGHEST_PROTOCOL)
 
             average_psi_c = np.mean(psi_c_mat, axis=0)
             std_psi_c = np.std(psi_c_mat, axis=0)
             psi_c_path = os.path.join(concat_loc_path, 'psi_c.pkl')
-            pickle.dump([list(current_psi_c_keys), average_psi_c, std_psi_c],
+            pickle.dump([average_psi_c, std_psi_c],
                         open(psi_c_path, 'wb'),
                         protocol=pickle.HIGHEST_PROTOCOL)
 
