@@ -512,7 +512,7 @@ def concatenate_psi(psi_b_list, psi_c_list):
                 bb += 1
             except IndexError:
                 psi_b_mat = \
-                    np.concatenate((psi_b_mat, np.zeros(N, 1)), axis=-1)
+                    np.concatenate((psi_b_mat, np.zeros((N, 1))), axis=-1)
 
     for nn in range(N):
         bb = 0
@@ -525,7 +525,7 @@ def concatenate_psi(psi_b_list, psi_c_list):
                 bb += 1
             except IndexError:
                 psi_c_mat = \
-                    np.concatenate((psi_c_mat, np.zeros(N, 1)), axis=-1)
+                    np.concatenate((psi_c_mat, np.zeros((N, 1))), axis=-1)
 
     return [psi_b_mat, psi_c_mat]
 
