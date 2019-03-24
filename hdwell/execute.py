@@ -20,7 +20,8 @@ lg = logging.getLogger(__name__)
 
 TIME_ESTIMATOR_CONV = 2.5e-11  # hrs per particle per mc timestep per dimension
 PROTOCOL_DICT = {
-    1: "sample on the unit ball in a purely random fashion"
+    1: "sample on the unit ball in a purely random fashion",
+    2: "sample on the unit ball using a Markov-chain random walk"
 }
 WARNING_MSG_LOCAL = """
 Warning: you're attempting to run this on your local machine.
