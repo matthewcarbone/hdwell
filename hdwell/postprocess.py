@@ -574,7 +574,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                     mem_c_mat = np.concatenate((mem_c_mat, mem_c), axis=1)
                     mem_b_mat = np.concatenate((mem_b_mat, mem_b), axis=1)
 
-                    if current_psi_c_keys != psi_c.keys():
+                    if psi_c.keys() not in current_psi_c_keys:
                         diff = len(psi_c.keys()) - len(current_psi_c_keys)
                         current_psi_c_keys = psi_c.keys()
                         psi_c_mat = \
@@ -582,7 +582,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                                            axis=-1)
                     psi_c_mat[index, :] = list(psi_c.values())
 
-                    if current_psi_b_keys != psi_b.keys():
+                    if psi_c.keys() not in current_psi_c_keys:
                         diff = len(psi_b.keys()) - len(current_psi_b_keys)
                         current_psi_b_keys = psi_b.keys()
                         psi_b_mat = \
