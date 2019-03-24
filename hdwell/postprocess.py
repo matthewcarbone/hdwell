@@ -498,17 +498,15 @@ def concat_loader(load_path):
 def concatenate_psi(psi_b_list, psi_c_list):
     N = len(psi_b_list)
     np.testing.assert_equal(N, len(psi_c_list))
-    n_bins_b = len(psi_b_list[0])
-    n_bins_c = len(psi_c_list[0])
-    psi_b_mat = np.zeros((N, n_bins_b))
-    psi_c_mat = np.zeros((N, n_bins_c))
+    psi_b_mat = np.zeros((N, len(psi_b_list[0])))
+    psi_c_mat = np.zeros((N, len(psi_c_list[0])))
 
     for nn in range(N):
         bb = 0
         cl = psi_b_list[nn]
         cl_keys = list(cl.keys())
         cl_vals = list(cl.values())
-        while bb < n_bins_b:
+        while bb < len(psi_b_list[nn]):
             try:
                 psi_b_mat[nn, cl_keys[bb]] = cl_vals[bb]
                 bb += 1
@@ -521,7 +519,7 @@ def concatenate_psi(psi_b_list, psi_c_list):
         cl = psi_c_list[nn]
         cl_keys = list(cl.keys())
         cl_vals = list(cl.values())
-        while bb < n_bins_b:
+        while bb < len(psi_c_list[nn]):
             try:
                 psi_c_mat[nn, cl_keys[bb]] = cl_vals[bb]
                 bb += 1
