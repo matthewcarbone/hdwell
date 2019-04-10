@@ -12,7 +12,12 @@ double surface_area(const double r, const int N)
     /* Surface area of an n-dimensional SURFACE not volume. e.g. N=2 yields the
        surface area of a 3D sphere: 4pi*r**2.*/
 
-    return 2.0*pow(M_PI, ((N + 1.0)/2.0))*pow(r, N)/tgamma((N + 1.0)/2.0);
+    const double ans = 2.0*pow(M_PI, ((N + 1.0)/2.0))*pow(r, N)
+        /tgamma((N + 1.0)/2.0);
+
+    // std::cout << ans << " " << pow(r, N) << " " << tgamma((N + 1.0)/2.0)
+    // << std::endl;
+    return ans;
 }
 
 double xstar(const double x0, const double x)
