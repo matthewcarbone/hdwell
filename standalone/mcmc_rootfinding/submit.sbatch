@@ -6,6 +6,6 @@
 #SBATCH --ntasks=1
 #SBATCH -N 1
 #SBATCH --mem=40000
-#SBATCH -w compute-0-1
+#SBATCH --exclusive
 
 python3 rfinder.py
