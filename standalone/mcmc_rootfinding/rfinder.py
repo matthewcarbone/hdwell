@@ -9,9 +9,10 @@ __status__ = "Prototype"
 import multiprocessing
 import numpy as np
 import yaml
-from time import time
+from time import time, sleep
 import pickle
 import sys
+import math
 
 
 def nball_sampling(N, nMC=1):
@@ -124,7 +125,8 @@ if __name__ == '__main__':
     for key, value in params.items():
         print(key, "=", value)
 
-    print(multiprocessing.cpu_count(), 'cpus')
+    n_workers = multiprocessing.cpu_count()
+    print(n_workers, 'cpus')
 
     delta_grid, beta_grid, dim_grid, x0_grid = generate_grids(params)
     n_beta, n_delta, n_x0 = len(beta_grid), len(delta_grid), len(x0_grid)
@@ -134,20 +136,19 @@ if __name__ == '__main__':
     print("New dim_grid len:     %i" % n_dim)
     print("New x0g_grid len:     %i" % n_x0)
 
-    def outer_loop(ii, r_dict):
-        dim = int(dim_grid[ii])
-        mat_up = np.empty((n_beta, n_delta, n_x0))
-        mat_down = np.empty((n_beta, n_delta, n_x0))
-        for jj, beta in enumerate(beta_grid):
-            for kk, delta in enumerate(delta_grid):
-                for ll, x0 in enumerate(x0_grid):
-                    mat_up[jj, kk, ll] = \
-                        monte_carlo_pUP_EXP(x0, delta, dim, beta, nMC=nmc)
-                    mat_down[jj, kk, ll] = \
-                        monte_carlo_pDOWN_EXP(x0, delta, dim, nMC=nmc)
+    zf1 = int(math.floor(math.log(n_dim, 10)))
+    zf2 = int(math.floor(math.log(n_beta, 10)))
+    zf3 = int(math.floor(math.log(n_delta, 10)))
+    zf4 = int(math.floor(math.log(n_x0, 10)))
 
-        r_dict[ii] = [ii, mat_up, mat_down]
-        print("dimension index", ii, "/", n_dim, "done")
+    def submit(counter, ii, dim, jj, beta, kk, delta, ll, x0, r_dict):
+        dim = int(dim)
+        up = monte_carlo_pUP_EXP(x0, delta, dim, beta, nMC=nmc)
+        down = monte_carlo_pDOWN_EXP(x0, delta, dim, nMC=nmc)
+        r_dict[counter] = [ii, jj, kk, ll, up, down]
+        print("%s ~ %s ~ %s ~ %s : %.05f ~ %.05f DONE"
+              % (str(ii).zfill(zf1), str(jj).zfill(zf2), str(kk).zfill(zf3),
+                 str(ll).zfill(zf4), down, up))
         sys.stdout.flush()
 
     processes = []
@@ -155,29 +156,44 @@ if __name__ == '__main__':
     r_dict = manager.dict()
 
     t0 = time()
-    for ii in range(n_dim):
-        print("submitted:", ii, "/", n_dim)
-        p = multiprocessing.Process(target=outer_loop, args=(ii, r_dict))
-        processes.append(p)
-        p.start()
-    sys.stdout.flush()
+    counter = 0
 
-    for process in processes:
-        process.join()
+    pool = multiprocessing.Pool(n_workers)
+    for ii, dim in enumerate(dim_grid):
+        for jj, beta in enumerate(beta_grid):
+            for kk, delta in enumerate(delta_grid):
+                for ll, x0 in enumerate(x0_grid):
+                    print("%s ~ %s ~ %s ~ %s : SUB"
+                          % (str(ii).zfill(zf1), str(jj).zfill(zf2),
+                             str(kk).zfill(zf3), str(ll).zfill(zf4)))
+                    # p = multiprocessing.Process(
+                    #     target=submit,
+                    #     args=(counter, ii, dim, jj, beta, kk, delta, ll, x0,
+                    #           r_dict))
+
+                    pool.apply_async(submit,
+                                     args=(counter, ii, dim, jj, beta, kk,
+                                           delta, ll, x0, r_dict))
+                    counter += 1
+                    # processes.append(p)
+                    # p.start()
+                    sys.stdout.flush()
+
+    pool.close()
+    pool.join()
+    sys.stdout.flush()
 
     d = r_dict.values()
 
     MAT_UP = np.empty((n_dim, n_beta, n_delta, n_x0))
     MAT_DOWN = np.empty((n_dim, n_beta, n_delta, n_x0))
     for ii, value in enumerate(d):
-        MAT_UP[value[0], :, :, :] = value[1]
-        MAT_DOWN[value[0], :, :, :] = value[2]
+        MAT_UP[value[0], value[1], value[2], value[3]] = value[4]
+        MAT_DOWN[value[0], value[1], value[2], value[3]] = value[5]
 
-    #np.save("pUP", MAT_UP)
-    #np.save("pDOWN", MAT_DOWN)
-
-    pickle.dump(MAT_UP, open("pUP", 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
-    pickle.dump(MAT_DOWN, open("pDOWN", 'wb'),
+    pickle.dump(MAT_UP, open("pUP.pkl", 'wb'),
+                protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(MAT_DOWN, open("pDOWN.pkl", 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
 
     print("total time elapsed:", np.round((time() - t0) / 60., 3), "m")
