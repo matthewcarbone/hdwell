@@ -77,6 +77,7 @@ def execute_protocol_1(params, target_run_directory, df, cluster=True,
         out, __ = process.communicate()
 
         if params['one_run']:
+            print(out)
             break
 
         exitcode = process.returncode

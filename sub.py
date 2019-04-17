@@ -34,6 +34,7 @@ if __name__ == '__main__':
     save_all_stats = bool(int(sys.argv[11]))
     markov_chain = bool(int(sys.argv[12]))
     xp_param = float(sys.argv[13])
+    print(sys.argv)
 
     if protocol == 1:
         protocol1(beta, dim, nmc, nvec, lambda_prime, ptype,
@@ -42,4 +43,4 @@ if __name__ == '__main__':
     elif protocol == 2:
         protocol1(beta, dim, nmc, nvec, lambda_prime, ptype,
                   target_run_directory, n_report, save_all_energies,
-                  save_all_stats, markov_chain, xp_param)
+                  save_all_stats, True, xp_param)
