@@ -142,13 +142,14 @@ if __name__ == '__main__':
     zf4 = int(math.floor(math.log(n_x0, 10)))
 
     def submit(counter, ii, dim, jj, beta, kk, delta, ll, x0, r_dict):
+        t0 = time()
         dim = int(dim)
         up = monte_carlo_pUP_EXP(x0, delta, dim, beta, nMC=nmc)
         down = monte_carlo_pDOWN_EXP(x0, delta, dim, nMC=nmc)
         r_dict[counter] = [ii, jj, kk, ll, up, down]
-        print("%s ~ %s ~ %s ~ %s : %.05f ~ %.05f DONE"
+        print("%s ~ %s ~ %s ~ %s : %.05f ~ %.05f (%.02f m) DONE"
               % (str(ii).zfill(zf1), str(jj).zfill(zf2), str(kk).zfill(zf3),
-                 str(ll).zfill(zf4), down, up))
+                 str(ll).zfill(zf4), down, up, (time() - t0) / 60.))
         sys.stdout.flush()
 
     processes = []
@@ -163,9 +164,9 @@ if __name__ == '__main__':
         for jj, beta in enumerate(beta_grid):
             for kk, delta in enumerate(delta_grid):
                 for ll, x0 in enumerate(x0_grid):
-                    print("%s ~ %s ~ %s ~ %s : SUB"
-                          % (str(ii).zfill(zf1), str(jj).zfill(zf2),
-                             str(kk).zfill(zf3), str(ll).zfill(zf4)))
+                    # print("%s ~ %s ~ %s ~ %s : SUB"
+                    #       % (str(ii).zfill(zf1), str(jj).zfill(zf2),
+                    #          str(kk).zfill(zf3), str(ll).zfill(zf4)))
                     # p = multiprocessing.Process(
                     #     target=submit,
                     #     args=(counter, ii, dim, jj, beta, kk, delta, ll, x0,
