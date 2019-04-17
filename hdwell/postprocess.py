@@ -571,7 +571,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
             psi_b_list = []
             psi_c_list = []
 
-            for __, row in sub_df.iterrows():
+            for __, row in tqdm(sub_df.iterrows()):
                 str_row = str(int(row['loc'])).zfill(zf_index)
                 [e, r, psi_b, psi_c, mem_b, mem_c] = \
                     concat_loader(os.path.join(run_path, str_row))

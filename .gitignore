@@ -7,3 +7,4 @@ job_data/
 old_data/
 *.ipynb
 *.o
+tar/
