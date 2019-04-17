@@ -11,6 +11,7 @@ import numpy as np
 import yaml
 from time import time
 import pickle
+import sys
 
 
 def nball_sampling(N, nMC=1):
@@ -147,6 +148,7 @@ if __name__ == '__main__':
 
         r_dict[ii] = [ii, mat_up, mat_down]
         print("dimension index", ii, "/", n_dim, "done")
+        sys.stdout.flush()
 
     processes = []
     manager = multiprocessing.Manager()
@@ -158,6 +160,7 @@ if __name__ == '__main__':
         p = multiprocessing.Process(target=outer_loop, args=(ii, r_dict))
         processes.append(p)
         p.start()
+    sys.stdout.flush()
 
     for process in processes:
         process.join()
@@ -170,8 +173,8 @@ if __name__ == '__main__':
         MAT_UP[value[0], :, :, :] = value[1]
         MAT_DOWN[value[0], :, :, :] = value[2]
 
-    np.save("pUP", MAT_UP)
-    np.save("pDOWN", MAT_DOWN)
+    #np.save("pUP", MAT_UP)
+    #np.save("pDOWN", MAT_DOWN)
 
     pickle.dump(MAT_UP, open("pUP", 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(MAT_DOWN, open("pDOWN", 'wb'),

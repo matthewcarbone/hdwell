@@ -5,28 +5,28 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Number of Monte-Carlo timesteps
-nmc:             500
+nmc:             50000
 
 delta:
-  n:             10
+  n:             100
   log_grid:      False
   minimum:       0.01    # Note this corresponds to the base if log_grid
   maximum:       300     # ^
 
 beta:
-  n:             10
+  n:             100
   log_grid:      False
   minimum:       0.5
   maximum:       1.5
 
 dim:
-  n:             10
+  n:             100
   log_grid:      False
   minimum:       3
   maximum:       30
 
 x0:
-  n:             10
+  n:             100
   log_grid:      True
   minimum:       -3
   maximum:       1
