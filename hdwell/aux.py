@@ -387,18 +387,22 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
 
         # Generate a new configuration.
         if randomwalk:
+            #                     --- Old Method ---
             # The random walk first samples a point randomly & uniformally on
             # the surface of the unit n-ball.
-            on_surface = sample_nball(N, nMC=1, n_vec=n_vec, yzero=True)
+            # on_surface = sample_nball(N, nMC=1, n_vec=n_vec, yzero=True)
 
             # Next, a radius is sampled from an exponential distribution and
             # used to scale that ball.
-            exp_rand = np.random.exponential(scale=1.0 / xp_param,
-                                             size=(1, 1, n_vec))
+            # exp_rand = np.random.exponential(scale=1.0 / xp_param,
+            #                                  size=(1, 1, n_vec))
 
             # The `xf` point is then updated by walking the particle from the
             # old configuration `x0` to the new one.
-            xf = x0 + on_surface * exp_rand
+
+            #                     --- New Method ---
+            # Push the particle by a Gaussian-sampled number
+            xf = x0 + np.random.normal(scale=xp_param, size=(x0.shape))
         else:
             xf = sample_nball(N, nMC=1, n_vec=n_vec)
         ef = energy(xf, lmbd=lambd_, ptype=ptype)
