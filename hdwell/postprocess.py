@@ -493,7 +493,11 @@ def concat_loader(load_path):
     mem_config = pickle.load(open(os.path.join(load_path,
                                                'sas_memory_config.pkl'), 'rb'))
 
-    return [all_nrg, all_r, psi_basin, psi_config, mem_basin, mem_config]
+    # Load in the rejection rates
+    rates = pickle.load(open(os.path.join(load_path, 'rates.pkl'), 'rb'))
+
+    return [all_nrg, all_r, psi_basin, psi_config, mem_basin, mem_config,
+            rates]
 
 
 def concatenate_psi(psi_b_list, psi_c_list):
@@ -570,13 +574,19 @@ def concatenator(data_path, prompt=True, s_by='beta'):
             e_mat, r_mat, mem_c_mat, mem_b_mat = None, None, None, None
             psi_b_list = []
             psi_c_list = []
+            rej_rate = []
+            up_rate = []
+            down_rate = []
 
             for __, row in tqdm(sub_df.iterrows()):
                 str_row = str(int(row['loc'])).zfill(zf_index)
-                [e, r, psi_b, psi_c, mem_b, mem_c] = \
+                [e, r, psi_b, psi_c, mem_b, mem_c, rates] = \
                     concat_loader(os.path.join(run_path, str_row))
                 psi_b_list.append(psi_b)
                 psi_c_list.append(psi_c)
+                rej_rate.append(rates[0])
+                up_rate.append(rates[2])
+                down_rate.append(rates[4])
 
                 if index == 0:
                     e_mat = e
@@ -648,6 +658,11 @@ def concatenator(data_path, prompt=True, s_by='beta'):
             psi_c_path = os.path.join(concat_loc_path, 'psi_c.pkl')
             pickle.dump([average_psi_c, std_psi_c],
                         open(psi_c_path, 'wb'),
+                        protocol=pickle.HIGHEST_PROTOCOL)
+
+            rej_path = os.path.join(concat_loc_path, 'rej.pkl')
+            pickle.dump([rej_rate, up_rate, down_rate],
+                        open(rej_path, 'wb'),
                         protocol=pickle.HIGHEST_PROTOCOL)
 
 
