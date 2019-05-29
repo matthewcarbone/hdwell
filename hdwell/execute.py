@@ -161,7 +161,7 @@ def run_all(params, target_directory, prompt=True):
     makedir_if_not_exist(target_data_directory, error_out=False)
     lg.info("Creating %s (only if it doesn't exist)" % target_run_directory)
     makedir_if_not_exist(target_run_directory, error_out=True)
-    with open(os.path.join(target_data_directory, 'data.yaml'),
+    with open(os.path.join(target_run_directory, 'params.yaml'),
               'w') as outfile:
         yaml.dump(params, outfile, default_flow_style=False)
 
