@@ -363,12 +363,10 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     down_total = 0
 
     # Rates are sampled at the same time as the energies.
-    rejection_rate = []
     cumulative_rejection_rate = []
-    up_rate = []
     cumulative_up_rate = []
-    down_rate = []
     cumulative_down_rate = []
+    prior_ii = 0
 
     for ii in range(nMC + 1):
 
@@ -428,15 +426,6 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         up_total += up
         down = len(dE_down)
         down_total += down
-
-        # Append the rates at the same times as the energies.
-        if ii % increment == 0:
-            rejection_rate.append(rejected / n_vec)
-            cumulative_rejection_rate.append(rejected_total / (ii + 1) / n_vec)
-            up_rate.append(up / n_vec)
-            cumulative_up_rate.append(up_total / (ii + 1) / n_vec)
-            down_rate.append(down / n_vec)
-            cumulative_down_rate.append(down_total / (ii + 1) / n_vec)
 
         # Update the xf vector where necessary.
         xf[:, :, dE_stay] = x0[:, :, dE_stay]
@@ -521,6 +510,20 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         # Get the average energy if the timestep warrents it. Also update the
         # average minimum radius.
         if ii in sample_e:
+
+            cumulative_rejection_rate.append(
+                rejected_total / ((ii - prior_ii) + 1) / n_vec)
+            cumulative_up_rate.append(
+                up_total / ((ii - prior_ii) + 1) / n_vec)
+            cumulative_down_rate.append(
+                down_total / ((ii - prior_ii) + 1) / n_vec)
+            prior_ii = ii
+
+            # Reset the counters
+            rejected_total = 0
+            up_total = 0
+            down_total = 0
+
             avg_e.append(np.mean(e0))
             avg_min_r.append(np.mean(rf))
             counter += 1
@@ -564,8 +567,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     pickle.dump(avg_min_r,
                 open(os.path.join(data_directory, "avg_min_r.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
-    pickle.dump([rejection_rate, cumulative_rejection_rate,
-                 up_rate, cumulative_up_rate, down_rate, cumulative_down_rate],
+    pickle.dump([cumulative_rejection_rate, cumulative_up_rate,
+                 cumulative_down_rate],
                 open(os.path.join(data_directory, "rates.pkl"), 'wb'),
                 protocol=pickle.HIGHEST_PROTOCOL)
 
