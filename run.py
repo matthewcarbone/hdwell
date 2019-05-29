@@ -55,14 +55,14 @@ import os
 
 from hdwell import logger
 from hdwell.execute import run_all
-from hdwell.postprocess import plotting_tool, concatenator
+from hdwell.postprocess import concatenator
 from hdwell.templates import DANGER_ZONE_TEMPLATE
 
 lg = logging.getLogger(__name__)
 
 WORKDIR = os.getcwd()
 HOMEDIR = os.path.expanduser("~")
-PROTOCOL_CHOICES = ['actual', 'plot', 'concatenate']
+PROTOCOL_CHOICES = ['actual', 'concatenate']
 
 
 def get_target_dir(directory_override):
@@ -161,11 +161,6 @@ if __name__ == '__main__':
             danger_zone_warnings(params['danger'])
 
         run_all(params, target_directory, prompt=args.prompt)
-
-    elif args.protocol == 'plot':
-        data_path = os.path.join(target_directory, 'DATA_hdwell')
-        lg.info("Plotting all data in %s" % data_path)
-        plotting_tool(data_path, params, prompt=args.prompt)
 
     elif args.protocol == 'concatenate':
         data_path = os.path.join(target_directory, 'DATA_hdwell')
