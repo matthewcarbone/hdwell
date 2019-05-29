@@ -421,7 +421,7 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
         dE_up = np.where((deltaE >= 0.0) & (rand_vec <= w_vec))[1]
         dE_stay = np.where(((deltaE >= 0.0) & (rand_vec > w_vec)) |
                            (r_temp > 1))[1]
-        dE_outside_unit_ball = np.where(r_temp > 1)[1]
+        dE_outside_unit_ball = np.where(r_temp > 1)[0]
 
         rejected = len(dE_stay)
         rejected_total += rejected
