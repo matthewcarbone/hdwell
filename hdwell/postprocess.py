@@ -577,6 +577,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
             rej_rate = []
             up_rate = []
             down_rate = []
+            outside_ball_rate = []
 
             for __, row in tqdm(sub_df.iterrows()):
                 str_row = str(int(row['loc'])).zfill(zf_index)
@@ -585,8 +586,9 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                 psi_b_list.append(psi_b)
                 psi_c_list.append(psi_c)
                 rej_rate.append(rates[0])
-                up_rate.append(rates[2])
-                down_rate.append(rates[4])
+                up_rate.append(rates[1])
+                down_rate.append(rates[2])
+                outside_ball_rate.append(rates[3])
 
                 if index == 0:
                     e_mat = e
@@ -661,7 +663,7 @@ def concatenator(data_path, prompt=True, s_by='beta'):
                         protocol=pickle.HIGHEST_PROTOCOL)
 
             rej_path = os.path.join(concat_loc_path, 'rej.pkl')
-            pickle.dump([rej_rate, up_rate, down_rate],
+            pickle.dump([rej_rate, up_rate, down_rate, outside_ball_rate],
                         open(rej_path, 'wb'),
                         protocol=pickle.HIGHEST_PROTOCOL)
 
