@@ -10,6 +10,7 @@ import logging
 import subprocess
 import numpy as np
 import pandas as pd
+import yaml
 
 from .aux import execution_parameters_permutations, current_datetime
 from .aux import makedir_if_not_exist, order_of_magnitude
@@ -160,6 +161,9 @@ def run_all(params, target_directory, prompt=True):
     makedir_if_not_exist(target_data_directory, error_out=False)
     lg.info("Creating %s (only if it doesn't exist)" % target_run_directory)
     makedir_if_not_exist(target_run_directory, error_out=True)
+    with open(os.path.join(target_data_directory, 'data.yaml'),
+              'w') as outfile:
+        yaml.dump(params, outfile, default_flow_style=False)
 
     # Within the target_run_directory, create all sub-directories. Each
     # corresponds to a different permutation of the parameters.
