@@ -8,3 +8,4 @@ old_data/
 *.ipynb
 *.o
 tar/
+paper_plots/
