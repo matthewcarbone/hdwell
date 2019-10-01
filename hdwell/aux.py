@@ -329,20 +329,25 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     # many more DELTA_OMEGA's!
     basin_recorder1 = np.zeros((N_pi_grid, n_vec), dtype=complex)
     basin_recorder2 = np.zeros((N_pi_grid, n_vec), dtype=complex)
-    config_recorder1 = np.zeros((N_pi_grid, n_vec), dtype=complex)
-    config_recorder2 = np.zeros((N_pi_grid, n_vec), dtype=complex)
+    config_recorder1 = np.zeros((N_pi_grid, n_vec))
+    config_recorder2 = np.zeros((N_pi_grid, n_vec))
 
-    # To detemrine which basin the "particle" is in at any given time, we need
+    # To determine which basin the "particle" is in at any given time, we need
     # to keep a counter. It will work as follows: each particle in the ensemble
     # will be assigned a "basin index." The basin index will take on a real
     # value corresponding to the basin number it is in. In other words, in the
     # first basin, this particle will have basin index = 1. Once it exits the
     # first basin, it acquires imaginary component i. In this way, we can keep
-    # track of whether or not the particle is in a basin, but which basin.
-    # Furthermore, once that particle enters the next basin, it looses the
-    # imaginary component, and gets +1 to its real component. Note that at
+    # track of not just whether or not the particle is in a basin, but which
+    # basin. Furthermore, once that particle enters the next basin, it looses
+    # the imaginary component, and gets +1 to its real component. Note that at
     # first we assume every particle is outside a basin.
     basin_index = np.ones((n_vec), dtype=complex) * 1j
+
+    # Optional: even at the start, particles that are < e_threshold are
+    # considered to be in a basin.
+    in_basin_to_start = np.where(e0 < e_threshold)[1]
+    basin_index[in_basin_to_start] = 0
 
     # Initialize the energy vector if report save all energies is true.
     if save_all_energies:
@@ -551,7 +556,8 @@ def pure_mc_sampling(N, beta, lambdaprime, nMC_lg, n_vec, ptype, n_report,
     np.testing.assert_equal(counter1, N_pi_grid)
     np.testing.assert_equal(counter2, N_pi_grid)
 
-    basin_recorder = basin_recorder1 == basin_recorder2
+    basin_recorder = ((basin_recorder1 == basin_recorder2) &
+                      np.imag(basin_recorder1) == 0)  # Ensure in basin
     n_basin_output = np.sum(basin_recorder, axis=1)
     config_recorder = config_recorder1 == config_recorder2
     n_config_output = np.sum(config_recorder, axis=1)
