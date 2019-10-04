@@ -1,0 +1,11 @@
+*.pyc
+*.pdf
+LOG
+NB/
+DATA_hdwell/
+job_data/
+old_data/
+*.ipynb
+*.o
+tar/
+paper_plots/
