@@ -135,12 +135,12 @@ def thresholds(N, beta, beta_c, ptype='log'):
     if ptype == 'log':
         if beta == 1.0:
             r = np.exp(-1.0 / N)
-        elif beta > 2.0 * beta_c:
+        elif beta >= 2.0 * beta_c:
             r = 0.0
         else:
             r = (2.0 - beta / beta_c)**(1.0 / (N * beta / beta_c - N))
 
-        if beta > beta_c:
+        if beta >= beta_c:
             e = -np.inf
         else:
             e = N * np.log(r) / beta_c
