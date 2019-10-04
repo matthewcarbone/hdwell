@@ -1,0 +1,60 @@
+# Parameter file: read by run.py
+#     This is the main parameter file for executing the hdwell source code. In
+#     general, parameters here can be overridden by command line flags. Note
+#     that this parameter file should always be in the working directory:
+#     ~/.../hdwell, else it will not be located.
+# 
+# Matthew R. Carbone & Marco Baity-Jesi
+
+# Protocol --------------------------------------------------------------------
+#     Determines the kind of run we will be doing. Default to pure monte carlo
+#     sampling on the unit ball. The protocols are as follows:
+#         protocol : int
+#             0 - Sample on the unit ball in a purely random fashion: Meropolis
+#                 selection criteria (DSMC).
+#             1 - Sample on the unit ball using a Markov chain random walk,
+#                 also with a Metropolis selection criteria (MCMC).
+
+protocol: 0
+
+
+# Execution Parameters --------------------------------------------------------
+#     All permutations of parameters listed will be executed independently. The
+#     parameters represent the following system properties:
+#         beta : list of floats
+#             Inverse temperature (1/T).
+#         N_dims : list of integers
+#             Dimensionality of the system.
+#         N_MC : list of integers
+#             The number of monte carlo time steps will be equal to 10^nmc[i],
+#             where `i` is some entry in the list. Note that the runtime will
+#             scale like Theta(10^nmc).
+#         N_tracer : list of integers
+#             Number of independent tracers in the simulation. Observables
+#             will be averaged over this axis.
+#         delta : float
+#             Gaussian scale parameter used in the MCMC (protocol 1)
+#         dw : float
+#             Trapping parameter. See Equation 3 in the Cammarota 2018 paper.
+#         mult : int
+#             Using list comprenension, changes nvec -> nvec * nvec_multiplier,
+#             where each of these sets is run on a different computer core.
+#         lambdaprime : float
+#             Value of lambda prime (lambdaprime = lambda * N_dims).
+#         ptype : str
+#             Type of potential we're considering. So far only 'log' has been
+#             tested.
+
+combo:
+  beta:      [0.8, 1.0, 1.2, 1.5, 1.8, 2.0, 2.2]
+  N_dims:    [150, 200]
+  N_MC:      [7]
+  N_tracer:  [200]
+  delta:     [0.1]  # Ignored if protocol is 0 (DSMC)
+  dw:        [0.5]
+
+mult:       20
+
+lambdaprime:   1.0
+ptype:         'log'
+
