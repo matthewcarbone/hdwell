@@ -12,11 +12,8 @@ import sys
 from time import time
 from collections import Counter
 from math import floor
-import pickle
 
 import hdwell2.auxiliary as aux
-
-HP = pickle.HIGHEST_PROTOCOL
 
 
 def simulate(nMC_lg, N, n_tracer, beta, delta, ptype, protocol,
@@ -436,33 +433,3 @@ def simulate(nMC_lg, N, n_tracer, beta, delta, ptype, protocol,
 
     return [tau_sample_grid, eAVG, eSTD, rminAVG, rminSTD, psiB, psiC,
             pi_grid_sample_1, Pi_basin_final_output, Pi_config_final_output]
-
-
-if __name__ == '__main__':
-
-    # Execute the simulation (this should be run directly on a cluster)
-    N_mc_LOG = int(sys.argv[1])
-    N_dims = int(sys.argv[2])
-    N_tracer = int(sys.argv[3])
-    beta = float(sys.argv[4])
-    delta = float(sys.argv[5])
-    ptype = str(sys.argv[6])
-    protocol = int(sys.argv[7])
-    lambdaprime = float(sys.argv[8])
-    dw = float(sys.argv[9])
-    save_to = str(sys.argv[10])
-
-    print(sys.argv)
-
-    all_results = simulate(
-        N_mc_LOG, N_dims, N_tracer, beta, delta, ptype, protocol,
-        save_all_energies=False,
-        n_report=1000,
-        verbose=True,
-        lambdaprime=lambdaprime,
-        dw=dw,
-        n_e_sample=1000,
-        n_mem_sample=100)
-
-    # Next save the results to disk:
-    pickle.dump(all_results, open(save_to, 'wb'), protocol=HP)

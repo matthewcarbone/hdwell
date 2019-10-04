@@ -21,4 +21,4 @@
 export OMP_NUM_THREADS=1
 export USE_SIMPLE_THREADED_LEVEL3=1
 
-python3 hdwell/simulator.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
+python3 sub.py "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
