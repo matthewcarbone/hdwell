@@ -132,13 +132,18 @@ def thresholds(N, beta, beta_c, ptype='log'):
     Returns [r, e], where r (e) is the threshold radius (energy).
     """
 
-    if beta == 1:
-        r = np.exp(-1.0 / N)
-    else:
-        r = (2.0 - beta / beta_c)**(1.0 / (N * beta / beta_c - N))
-
     if ptype == 'log':
-        e = N * np.log(r) / beta_c
+        if beta == 1.0:
+            r = np.exp(-1.0 / N)
+        elif beta > 2.0 * beta_c:
+            r = 0.0
+        else:
+            r = (2.0 - beta / beta_c)**(1.0 / (N * beta / beta_c - N))
+
+        if beta > beta_c:
+            e = -np.inf
+        else:
+            e = N * np.log(r) / beta_c
     else:
         raise RuntimeError("ptype %s not supported." % ptype)
 

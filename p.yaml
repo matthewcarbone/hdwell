@@ -46,14 +46,14 @@ protocol: 0
 #             tested.
 
 combo:
-  beta:      [0.8, 1.0, 1.2, 1.5, 1.8, 2.0, 2.2]
-  N_dims:    [150, 200]
-  N_MC:      [7]
-  N_tracer:  [200]
+  beta:      [0.2, 1.5, 2.8]
+  N_dims:    [10]
+  N_MC:      [8]
+  N_tracer:  [500]
   delta:     [0.1]  # Ignored if protocol is 0 (DSMC)
   dw:        [0.5]
 
-mult:       20
+mult:       200
 
 lambdaprime:   1.0
 ptype:         'log'
