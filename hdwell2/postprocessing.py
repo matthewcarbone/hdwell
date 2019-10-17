@@ -10,10 +10,57 @@ __status__ = "Prototype"
 import numpy as np
 import pickle
 import os
+from scipy.integrate import quad
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
+
+
+def hxw(x, w):
+    """Equation 3 in the Cammarota 2018 paper."""
+
+    def integrand(u):
+        return 1.0 / (1.0 + u) / u**x
+
+    return quad(integrand, w, np.inf)[0] * np.sin(np.pi * x) / np.pi
+
+
+def plot_Pi(list_of_results, list_of_colors, list_of_betas, n_tracers,
+            title=None, xscale='log', yscale=None, DFS=12, capsize=2,
+            capthick=0.3, elw=0.3, marker='s', ms=1.0, ninc=30, lw=1.0,
+            full_legend=False, dw=0.5):
+
+    if title is not None:
+        plt.title(r'%s' % title, fontsize=DFS)
+
+    if xscale is not None:
+        plt.xscale(xscale)
+
+    if yscale is not None:
+        plt.yscale(yscale)
+
+    for jj in range(len(list_of_results)):
+
+        if full_legend:
+            label = r'$\Pi_{\mathrm{B}}(\tau),\: \beta=%.01f$' % \
+                list_of_betas[jj]
+        else:
+            label = r'$\beta=%.01f$' % list_of_betas[jj]
+
+        plt.errorbar(list_of_results[jj]['pi_grid'],
+                     list_of_results[jj]['PiB'],
+                     np.array(list_of_results[jj]['dPiB']) /
+                     np.sqrt(n_tracers - 1), linewidth=lw,
+                     color=list_of_colors[jj], marker=marker, ms=ms,
+                     capthick=capthick, capsize=capsize, elinewidth=elw,
+                     label=label)
+
+        h = hxw(2.0 - list_of_betas[jj], dw)
+        plt.plot(list_of_results[jj]['pi_grid'],
+                 [h for __ in
+                  range(len(list_of_results[jj]['pi_grid']))],
+                 color=list_of_colors[jj], linestyle='--')
 
 
 def plot_psi(list_of_results, list_of_colors, list_of_betas, n_tracers,
